@@ -10,8 +10,8 @@
 //
 #include <iostream>
 #include <string>
-#include "../include/itsoftware-linux.h"
-#include "../include/itsoftware-linux-core.h"
+#include "../include/itsoftware-macos.h"
+#include "../include/itsoftware-macos-core.h"
 
 //
 // using
@@ -21,21 +21,21 @@ using std::endl;
 using std::ends;
 using std::string;
 using std::stringstream;
-using ItSoftware::Linux::ItsString;
-using ItSoftware::Linux::ItsExpandDirection;
-using ItSoftware::Linux::ItsTime;
-using ItSoftware::Linux::ItsConvert;
-using ItSoftware::Linux::ItsRandom;
-using ItSoftware::Linux::ItsDateTime;
-using ItSoftware::Linux::ItsLog;
-using ItSoftware::Linux::ItsDataSizeStringType;
-using ItSoftware::Linux::ItsDateTime;
-using ItSoftware::Linux::ItsID;
-using ItSoftware::Linux::ItsCreateIDOptions;
-using ItSoftware::Linux::Core::ItsTimer;
-using ItSoftware::Linux::Core::ItsFile;
-using ItSoftware::Linux::Core::ItsGuid;
-using ItSoftware::Linux::Core::ItsGuidFormat;
+using ItSoftware::macOS::ItsString;
+using ItSoftware::macOS::ItsExpandDirection;
+using ItSoftware::macOS::ItsTime;
+using ItSoftware::macOS::ItsConvert;
+using ItSoftware::macOS::ItsRandom;
+using ItSoftware::macOS::ItsDateTime;
+using ItSoftware::macOS::ItsLog;
+using ItSoftware::macOS::ItsDataSizeStringType;
+using ItSoftware::macOS::ItsDateTime;
+using ItSoftware::macOS::ItsID;
+using ItSoftware::macOS::ItsCreateIDOptions;
+using ItSoftware::macOS::Core::ItsTimer;
+using ItSoftware::macOS::Core::ItsFile;
+using ItSoftware::macOS::Core::ItsGuid;
+using ItSoftware::macOS::Core::ItsGuidFormat;
 
 
 //

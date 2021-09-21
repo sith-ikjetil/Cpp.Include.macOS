@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////
-//: Title        : itsoftware-linux.h
-//: Product:     : Cpp.Include.Windows
-//: Date         : 2020-05-01
+//: Title        : itsoftware-macos.h
+//: Product:     : Cpp.Include.macOS
+//: Date         : 2021-09-21
 //: Author       : "Kjetil Kristoffer Solberg" <post@ikjetil.no>
 //: Version      : 1.0.0.0
-//: Descriptions : Implementation of Cpp.Include.Linux.
+//: Descriptions : Implementation of Cpp.Include.macOS.
 #pragma once
 //
 // #include
@@ -31,7 +31,7 @@
 //
 namespace ItSoftware
 {
-	namespace Linux
+	namespace macOS
 	{
 		//
 		// using
@@ -49,7 +49,7 @@ namespace ItSoftware
 		#define DECIMALTOSTRING1(d) DECIMALTOSTRING2(d)
 		#define ERR_AT_LOCATION(e) __FILE__ "(" DECIMALTOSTRING1(__LINE__) "): " #e
 		#define ERROR_HERE __FILE__ "(" DECIMALTOSTRING2(__LINE__) "): "
-		#define CHAR_BIT 8
+		//#define CHAR_BIT 8
 		#define BitsCount(val) (sizeof(val) * CHAR_BIT)
 		#define Shift(val, steps) (steps % BitsCount(val))
 		#define ROL(val, steps) ((val << Shift(val, steps)) | (val >> (BitsCount(val) - Shift(val, steps))))

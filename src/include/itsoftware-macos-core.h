@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////
-//: Title        : itsoftware-linux-core.h
-//: Product:     : Cpp.Include.Linux
-//: Date         : 2020-05-01
+//: Title        : itsoftware-macos-core.h
+//: Product:     : Cpp.Include.macOS
+//: Date         : 2021-09-21
 //: Author       : "Kjetil Kristoffer Solberg" <post@ikjetil.no>
 //: Version      : 1.0.0.0
-//: Descriptions : Implementation of Cpp.Include.Linux.
+//: Descriptions : Implementation of Cpp.Include.macOS.
 //: Uses         : libuuid.a.
 #pragma once
 //
@@ -21,7 +21,7 @@
 #include <iostream>
 #include <vector>
 #include <uuid/uuid.h>
-#include "itsoftware-linux.h"
+#include "itsoftware-macos.h"
 
 //
 // namespace
@@ -31,7 +31,7 @@ namespace ItSoftware
     //
     // namespace
     //
-    namespace Linux
+    namespace macOS
     {
         //
         // namespace
@@ -45,7 +45,7 @@ namespace ItSoftware
             using std::string;
             using std::unique_ptr;
             using std::vector;
-            using ItSoftware::Linux::ItsString;
+            using ItSoftware::macOS::ItsString;
 
             //
             // struct: ItsTimer
@@ -353,7 +353,7 @@ namespace ItSoftware
                     }
 
                     i_flags |= O_CREAT;
-                    i_flags |= O_LARGEFILE;
+                    //i_flags |= O_LARGEFILE;
 
                     if (flags.find("t") != string::npos)
                     {
@@ -416,7 +416,7 @@ namespace ItSoftware
                     }
 
                     i_flags |= O_CREAT;
-                    i_flags |= O_LARGEFILE;
+                    //i_flags |= O_LARGEFILE;
 
                     if (flags.find("t") != string::npos)
                     {
