@@ -432,6 +432,11 @@ namespace ItSoftware
                     {
                         return false;
                     }
+                    if (fchmod(this->m_fd, mode) != 0 )   
+                    {
+                        this->Close();
+                        return false;
+                    }
 
 	            	this->m_filename = filename;
 
