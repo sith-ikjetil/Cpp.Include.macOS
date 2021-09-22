@@ -405,9 +405,27 @@ namespace ItSoftware
             };
 
             //
+            // struct: ItsError
+            //
+            // (i): macOS error messages
+            //
+            struct ItsError
+            {
+            public:
+                static string GetErrorDescription(int err) 
+                {
+                    return strerror(err);
+                }
+                static string GetLastErrorDescription()
+                {
+                    return strerror(errno);
+                }
+            };
+
+            //
             // struct: ItsDirectory
             // 
-            // (i): Linux directory routines.
+            // (i): macOS directory routines.
             //
             struct ItsDirectory
             {

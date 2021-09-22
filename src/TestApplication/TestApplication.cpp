@@ -38,6 +38,7 @@ using ItSoftware::macOS::Core::ItsGuid;
 using ItSoftware::macOS::Core::ItsGuidFormat;
 using ItSoftware::macOS::Core::ItsPath;
 using ItSoftware::macOS::Core::ItsDirectory;
+using ItSoftware::macOS::Core::ItsError;
 
 //
 // Function Prototypes
@@ -341,7 +342,7 @@ void TestItsFile()
 	ItsFile file;
 	if (!file.OpenOrCreate(g_filename,"rwt",ItsFile::CreateMode("rw","rw","rw")))
 	{
-		cout << "> FAILED: " << strerror(errno) << endl;
+		cout << "> FAILED: " << ItsError::GetLastErrorDescription() << endl;
 		cout << endl;
 		return;
 	}
@@ -352,7 +353,7 @@ void TestItsFile()
 	cout << "file.Write((void*)text,strlen(text), &written)" << endl;
     if ( !file.Write((void*)text,strlen(text), &written) )
 	{
-		cout << "> FAILED: " << strerror(errno) << endl;
+		cout << "> FAILED: " << ItsError::GetLastErrorDescription() << endl;
 		cout << endl;
 		return;
 	}
@@ -362,7 +363,7 @@ void TestItsFile()
     string str;
     cout << "file.ReadAllText(str)" << endl;
     if (!file.ReadAllText(str)) {
-        cout << "> FAILED: " << strerror(errno) << endl;
+        cout << "> FAILED: " << ItsError::GetLastErrorDescription() << endl;
         cout << endl;
         return;
     }
@@ -371,14 +372,14 @@ void TestItsFile()
 
     cout << "file.Close()" << endl;
     if (!file.Close() ) {
-        cout << "> FAILED: " << strerror(errno) << endl;;
+        cout << "> FAILED: " << ItsError::GetLastErrorDescription() << endl;;
     }
     cout << "> Success" << endl;
 
 
     cout << "ItsFile::Copy(g_filename, g_copyToFilename, true)" << endl;
     if (!ItsFile::Copy(g_filename, g_copyToFilename, true)) {
-        cout << "> FAILED: " << strerror(errno) << endl;
+        cout << "> FAILED: " << ItsError::GetLastErrorDescription() << endl;
         cout << endl;
         return;
     }
@@ -394,7 +395,7 @@ void TestItsFile()
 
     cout << "ItsFile::Delete(g_copyToFilename)" << endl;
     if (!ItsFile::Delete(g_copyToFilename)) {
-        cout << "> FAILED: " << strerror(errno) << endl;
+        cout << "> FAILED: " << ItsError::GetLastErrorDescription() << endl;
         cout << endl;
         return;
     }
@@ -522,7 +523,7 @@ void TestItsGuid()
         cout << R"(> ")" << ItsGuid::ToString(guid, fmt.PrefixedCompactFormat) << R"(")" << endl;
     }
     else {
-        cout << "> FAILED: " << strerror(errno) << endl;
+        cout << "> FAILED: " << ItsError::GetLastErrorDescription() << endl;
     }
 
     cout << endl;
@@ -600,7 +601,7 @@ void TestItsDirectory()
     cout << R"(ItsDirectory::CreateDirectory(cdir))" << endl;
     bool bResult = ItsDirectory::CreateDirectory(cdir, ItsFile::CreateMode("rw","rw","rw"));
     if (!bResult) {
-        cout << "> FAILED. Error: " << strerror(errno) << endl;
+        cout << "> FAILED. Error: " << ItsError::GetLastErrorDescription() << endl;
         cout << endl;
         return;
     }
@@ -609,7 +610,7 @@ void TestItsDirectory()
     cout << R"(ItsDirectory::RemoveDirectory(cdir))" << endl;
     bResult = ItsDirectory::RemoveDirectory(cdir);
     if (!bResult) {
-        cout << "> FAILED: " << strerror(errno) << endl;;
+        cout << "> FAILED: " << ItsError::GetLastErrorDescription() << endl;;
         cout << endl;
         return;
     }
