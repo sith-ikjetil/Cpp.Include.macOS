@@ -340,6 +340,7 @@ void TestItsFile()
 	PrintTestHeader("## Test ItsFile ");
 
 	ItsFile file;
+    cout << R"(file.OpenOrCreate(g_filename,"rwt",ItsFile::CreateMode("rw","rw","rw")))" << endl;
 	if (!file.OpenOrCreate(g_filename,"rwt",ItsFile::CreateMode("rw","rw","rw")))
 	{
 		cout << "> FAILED: " << ItsError::GetLastErrorDescription() << endl;
@@ -350,8 +351,8 @@ void TestItsFile()
 
 	char text[] = "Test Line 1\nTest Line 2\n";
 	size_t written(0);
-	cout << "file.Write((void*)text,strlen(text), &written)" << endl;
-    if ( !file.Write((void*)text,strlen(text), &written) )
+	cout << "file.Write((void*)text, strlen(text), &written)" << endl;
+    if ( !file.Write((void*)text, strlen(text), &written) )
 	{
 		cout << "> FAILED: " << ItsError::GetLastErrorDescription() << endl;
 		cout << endl;
