@@ -155,10 +155,14 @@ void TestItsConvert()
     cout << "> " << ItsConvert::ToNumber<unsigned long>("12346789") << endl;
     cout << R"(ItsConvert::ToNumber<long long>("12345678900"))" << endl;
     cout << "> " << ItsConvert::ToNumber<long long>("12345678900") << endl;
+    cout << R"(ItsConvert::ToNumber<unsigned long long>("12345678900"))" << endl;
+    cout << "> " << ItsConvert::ToNumber<unsigned long long>("12345678900") << endl;
     cout << R"(ItsConvert::ToNumber<float>("-12.34"))" << endl;
     cout << "> " << ItsConvert::ToNumber<float>("-12.34") << endl;
     cout << R"(ItsConvert::ToNumber<double>("1.234"))" << endl;
     cout << "> " << ItsConvert::ToNumber<double>("1.234") << endl;
+    cout << R"(ItsConvert::ToNumber<long double>("1.234"))" << endl;
+    cout << "> " << ItsConvert::ToNumber<long double>("1.234") << endl;
     cout << R"(ItsConvert::ToNumber<short>("1234"))" << endl;
     cout << "> " << ItsConvert::ToNumber<short>("1234") << endl;
     cout << R"(ItsConvert::ToNumber<unsigned short>("40001"))" << endl;
@@ -175,13 +179,17 @@ void TestItsConvert()
     cout << R"(> ")" << ItsConvert::ToString<unsigned long>(12346789) << R"(")" << endl;
     cout << R"(ItsConvert::ToString<long long>(12345678900))" << endl;
     cout << R"(> ")" << ItsConvert::ToString<long long>(12345678900) << R"(")" << endl;
+    cout << R"(ItsConvert::ToString<unsigned long long>(12345678900))" << endl;
+    cout << R"(> ")" << ItsConvert::ToString<unsigned long long>(12345678900) << R"(")" << endl;
     cout << R"(ItsConvert::ToString<float>(-12.34))" << endl;
     cout << R"(> ")" << ItsConvert::ToString<float>(-12.34f) << R"(")" << endl;
     cout << R"(ItsConvert::ToString<double>(1.234))" << endl;
     cout << R"(> ")" << ItsConvert::ToString<double>(1.234) << R"(")" << endl;
-    cout << R"(ItsConvert::ToString<short>(1234)" << endl;
+    cout << R"(ItsConvert::ToString<long double>(1.234))" << endl;
+    cout << R"(> ")" << ItsConvert::ToString<long double>(1.234) << R"(")" << endl;
+    cout << R"(ItsConvert::ToString<short>(1234))" << endl;
     cout << R"(> ")" << ItsConvert::ToString<short>(1234) << R"(")" << endl;
-    cout << R"(ItsConvert::ToString<unsigned short>(40001)" << endl;
+    cout << R"(ItsConvert::ToString<unsigned short>(40001))" << endl;
     cout << R"(> ")" << ItsConvert::ToString<unsigned short>(40001) << R"(")" << endl;
     
     PrintTestSubHeader("ToStringFormatted");
