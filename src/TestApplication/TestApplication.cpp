@@ -36,7 +36,8 @@ using ItSoftware::macOS::Core::ItsTimer;
 using ItSoftware::macOS::Core::ItsFile;
 using ItSoftware::macOS::Core::ItsGuid;
 using ItSoftware::macOS::Core::ItsGuidFormat;
-
+using ItSoftware::macOS::Core::ItsPath;
+using ItSoftware::macOS::Core::ItsDirectory;
 
 //
 // Function Prototypes
@@ -52,6 +53,8 @@ void TestItsFile();
 void TestItsDateTime();
 void TestItsID();
 void TestItsGuid();
+void TestItsPath();
+void TestItsDirectory();
 void ExitFn();
 void PrintTestHeader(string txt);
 
@@ -61,6 +64,11 @@ void PrintTestHeader(string txt);
 ItsTimer g_timer;
 char g_filename[] = "/Users/kjetilso/test.txt";
 char g_copyToFilename[] = "/Users/kjetilso/test2.txt";
+string g_path1("/Users");
+string g_path2("/kjetilso/test.txt");
+string g_invalidPath("Users\0/kjetilso");
+string g_directoryRoot("/Users/kjetilso");
+string g_creatDir("/Users/kjetilso/testdir");
 
 //
 // Function: ExitFn
@@ -94,6 +102,8 @@ int main(int argc, char* argv[])
     TestItsDateTime();
     TestItsID();
     TestItsGuid();
+    TestItsPath();
+    TestItsDirectory();
 	TestItsTimerStop();
 
     return EXIT_SUCCESS;
@@ -514,6 +524,96 @@ void TestItsGuid()
     else {
         cout << "> FAILED: " << strerror(errno) << endl;
     }
+
+    cout << endl;
+}
+
+//
+// Function: TestItsPath
+//
+// (i): Test ItsPath
+//
+void TestItsPath()
+{
+    PrintTestHeader("## Test ItsPath ");
+
+    string path = ItsPath::Combine(g_path1, g_path2);
+    cout << R"(ItsPath::Exists(path))" << endl;
+    if (ItsPath::Exists(path)) {
+        cout << "> Path: " << path << " exists" << endl;
+    }
+    else {
+        cout << "> Path: " << path << " does not exist" << endl;
+    }
+
+    cout << R"(ItsPath::GetDirectory(path))" << endl; 
+    cout << R"(> ")" << ItsPath::GetDirectory(path) << R"(")" << endl;
+    cout << R"(ItsPath::GetFilename(path))" << endl; 
+    cout << R"(> ")" << ItsPath::GetFilename(path) << R"(")" << endl;
+    cout << R"(ItsPath::GetExtension(path))" << endl; 
+    cout << R"(> ")" << ItsPath::GetExtension(path) << R"(")" << endl;
+    cout << R"(ItsPath::HasExtension(path, ".txt"))" << endl; 
+    cout << R"(> )" << ((ItsPath::HasExtension(path, ".txt")) ? "true" : "false") << endl;
+    cout << R"(ItsPath::HasExtension(path, ".js"))" << endl; 
+    cout << R"(> )" << ((ItsPath::HasExtension(path, ".js")) ? "true" : "false") << endl;
+    cout << R"(ItsPath::ChangeExtension(path,".js"))" << endl; 
+    cout << R"(> ")" << ItsPath::ChangeExtension(path, ".js") << endl;
+    cout << R"(ItsPath::IsPathValid(path))" << endl; 
+    cout << R"(> )" << ((ItsPath::IsPathValid(path)) ? "true" : "false") << endl;
+    cout << R"(ItsPath::IsPathValid(g_invalidPath))" << endl; 
+    cout << R"(> )" << ((ItsPath::IsPathValid(g_invalidPath)) ? "true" : "false") << endl;
+
+    cout << endl;
+}
+
+//
+// Function: TestItsDirectory
+//
+// (i): Tests ItsDirectory.
+//
+void TestItsDirectory()
+{
+    PrintTestHeader("## Test ItsDirectory ");
+
+    cout << R"(ItsDirectory::GetDirectories(g_directoryRoot))" << endl;
+    auto result = ItsDirectory::GetDirectories(g_directoryRoot);
+    if (result.size() > 0) {
+        cout << "> Success. Found " << result.size() << " sub-directories under " << g_directoryRoot << endl;
+        for (auto r : result) {
+            cout << ">> " << r << endl;
+        }
+    }
+    else {
+        cout << "> FAILED. No directories found under " << g_directoryRoot << endl;
+    }
+
+    cout << R"(ItsDirectory::GetFiles(g_directoryRoot))" << endl;
+    auto result2 = ItsDirectory::GetFiles(g_directoryRoot);
+    if (result2.size() > 0) {
+        cout << "> Success. Found " << result2.size() << " files under " << g_directoryRoot << endl;
+        for (auto r : result2) {
+            cout << ">> " << r << endl;
+        }
+    }
+
+    auto cdir = g_creatDir;
+    cout << R"(ItsDirectory::CreateDirectory(cdir))" << endl;
+    bool bResult = ItsDirectory::CreateDirectory(cdir, ItsFile::CreateMode("rw","rw","rw"));
+    if (!bResult) {
+        cout << "> FAILED. Error: " << strerror(errno) << endl;
+        cout << endl;
+        return;
+    }
+    cout << "> Success creating " << cdir << endl;
+
+    cout << R"(ItsDirectory::RemoveDirectory(cdir))" << endl;
+    bResult = ItsDirectory::RemoveDirectory(cdir);
+    if (!bResult) {
+        cout << "> FAILED: " << strerror(errno) << endl;;
+        cout << endl;
+        return;
+    }
+    cout << "> Success removing directory " << cdir << endl;
 
     cout << endl;
 }
