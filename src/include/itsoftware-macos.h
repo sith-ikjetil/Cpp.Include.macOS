@@ -1394,5 +1394,5 @@ namespace ItSoftware
 				return id.str();
 			}
 		};
-	} // namespace Linux
+	} // namespace macOS
 } // namespace ItSoftware

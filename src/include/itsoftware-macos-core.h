@@ -1000,5 +1000,5 @@ namespace ItSoftware
                 }
             };
         } // namespace Core
-    } // namespace Linux
+    } // namespace macOS
 } // namespace ItSoftware
