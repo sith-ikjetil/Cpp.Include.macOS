@@ -22,6 +22,7 @@
 #include <iostream>
 #include <vector>
 #include <uuid/uuid.h>
+#include <signal.h>
 #include "itsoftware-macos.h"
 
 //
@@ -47,6 +48,11 @@ namespace ItSoftware
             using std::unique_ptr;
             using std::vector;
             using ItSoftware::macOS::ItsString;
+
+            //
+            // #define
+            //
+            #define FILE_MONITOR_BUFFER_LENGTH (10 * (sizeof(inotify_event) + NAME_MAX + 1))
 
             //
             // struct: ItsTimer
