@@ -22,6 +22,8 @@
 #include <random>
 #include <functional>
 #include <stdlib.h>
+#include <syslog.h>
+#include <os/log.h>
 #include <time.h>
 #include <string.h>
 #include <type_traits>
@@ -1216,6 +1218,39 @@ namespace ItSoftware
 		};
 
 		//
+		// ItsLogUtil
+		//
+		// (i): Convertion misc. methods.
+		//
+		struct ItsLogUtil
+		{
+			static constexpr const char* LogTypeToString(ItsLogType t)
+			{
+				switch (t)
+				{
+				case ItsLogType::Information:
+					return "Information";
+					break;
+				case ItsLogType::Warning:
+					return "Warning";
+					break;
+				case ItsLogType::Error:
+					return "Error";
+					break;
+				case ItsLogType::Other:
+					return "Other";
+					break;
+				case ItsLogType::Debug:
+					return "Debug";
+					break;
+				default:
+					break;
+				}
+				return "<UNKNOWN>";
+			}
+		};
+
+		//
 		// struct: ItsLogItem
 		//
 		// (i): Log item for ItsLog
@@ -1225,6 +1260,34 @@ namespace ItSoftware
 			ItsLogType Type;
 			string Description;
 			tm When;
+
+			string ToFriendlyString()
+			{
+				stringstream ss;
+				
+				ss << std::setiosflags(std::ios::left) << std::setw(12) << ItsLogUtil::LogTypeToString(this->Type) << ItsDateTime(this->When).ToString() << " " << this->Description;
+				
+				string retVal = ss.str();
+				return retVal;
+			}
+
+			string ToString()
+			{
+				stringstream ss;
+				string nl1("\r\n");
+				string nl2("\n");
+				string s1(":");
+				string rep_nl(" ");
+				string rep_s(" - ");
+				
+				auto description = ItsString::Replace(this->Description, nl1, rep_nl);
+				description = ItsString::Replace(description, nl2, rep_nl);
+				description = ItsString::Replace(description, s1, rep_s);
+				ss << ItsLogUtil::LogTypeToString(this->Type) << " : " << ItsDateTime(this->When).ToString("s") << " : " << description;
+
+				string retVal = ss.str();
+				return retVal;
+			}
 		};
 
 		//
@@ -1236,8 +1299,23 @@ namespace ItSoftware
 		{
 		private:
 			vector<ItsLogItem> m_items;
-
+			string m_ident;
+			bool m_bLogToSyslog;
 		public:
+			ItsLog(string ident, bool log_to_syslog)
+			:	m_ident(ident),
+				m_bLogToSyslog(log_to_syslog)
+			{
+				if (this->m_bLogToSyslog) {
+					openlog(this->m_ident.c_str(), LOG_PID | LOG_NDELAY, LOG_USER);
+				}
+			}
+			~ItsLog()
+			{
+				if (this->m_bLogToSyslog) {
+					closelog();
+				}
+			}
 			void LogInformation(string description)
 			{
 				ItsLogItem item;
@@ -1246,6 +1324,10 @@ namespace ItSoftware
 				item.Type = ItsLogType::Information;
 
 				this->m_items.push_back(item);
+
+				if ( this->m_bLogToSyslog ) {
+					syslog(LOG_INFO, "%s", item.ToString().c_str());
+				}
 			}
 
 			void LogWarning(string description)
@@ -1256,6 +1338,10 @@ namespace ItSoftware
 				item.Type = ItsLogType::Warning;
 
 				this->m_items.push_back(item);
+
+				if ( this->m_bLogToSyslog ) {
+					syslog(LOG_WARNING, "%s", item.ToString().c_str());
+				}
 			}
 
 			void LogError(string description)
@@ -1266,6 +1352,10 @@ namespace ItSoftware
 				item.Type = ItsLogType::Error;
 
 				this->m_items.push_back(item);
+
+				if ( this->m_bLogToSyslog ) {
+					syslog(LOG_ERR, "%s", item.ToString().c_str());
+				}
 			}
 
 			void LogOther(string description)
@@ -1276,6 +1366,10 @@ namespace ItSoftware
 				item.Type = ItsLogType::Other;
 
 				this->m_items.push_back(item);
+
+				if ( this->m_bLogToSyslog ) {
+					syslog(LOG_INFO, "%s", item.ToString().c_str());
+				}
 			}
 
 			void LogDebug(string description)
@@ -1286,6 +1380,10 @@ namespace ItSoftware
 				item.Type = ItsLogType::Debug;
 
 				this->m_items.push_back(item);
+
+				if ( this->m_bLogToSyslog ) {
+					syslog(LOG_DEBUG, "%s", item.ToString().c_str());
+				}
 			}
 
 			const vector<ItsLogItem> &GetItems()
@@ -1303,43 +1401,16 @@ namespace ItSoftware
 				this->m_items.clear();
 			}
 
-			string LogTypeToString(ItsLogType t)
-			{
-				string type;
-				switch (t)
-				{
-				case ItsLogType::Information:
-					type = "Information";
-					break;
-				case ItsLogType::Warning:
-					type = "Warning";
-					break;
-				case ItsLogType::Error:
-					type = "Error";
-					break;
-				case ItsLogType::Other:
-					type = "Other";
-					break;
-				case ItsLogType::Debug:
-					type = "Debug";
-					break;
-				default:
-					type = "<UNKNOWN>";
-					break;
-				}
-				return type;
-			}
-
 			string ToFriendlyString()
 			{
 				stringstream ss;
 				for (auto i : this->m_items)
 				{
-					ss << std::setiosflags(std::ios::left) << std::setw(12) << this->LogTypeToString(i.Type) << ItsDateTime(i.When).ToString() << " " << i.Description << endl;
+					ss << i.ToFriendlyString() << endl;
 				}
-				ss << ends;
-
-				return ss.str();
+				
+				string retVal = ss.str();
+				return retVal;
 			}
 
 			string ToString()
@@ -1348,18 +1419,43 @@ namespace ItSoftware
 				string nl1("\r\n");
 				string nl2("\n");
 				string s1(":");
-				string rep_nl(" - ");
-				string rep_s(",");
+				string rep_nl(" ");
+				string rep_s(" - ");
 				for (auto i : this->m_items)
 				{
-					auto description = ItsString::Replace(i.Description, nl1, rep_nl);
-					description = ItsString::Replace(description, nl2, rep_nl);
-					description = ItsString::Replace(description, s1, rep_s);
-					ss << this->LogTypeToString(i.Type) << " : " << ItsDateTime(i.When).ToString("s") << " : " << description << endl;
+					ss << i.ToString() << endl;
 				}
-				ss << ends;
 
-				return ss.str();
+				string retVal = ss.str();
+				return retVal;
+			}
+
+			string ToString(uint32_t tailN)
+			{
+				stringstream ss;
+				string nl1("\r\n");
+				string nl2("\n");
+				string s1(":");
+				string rep_nl(" ");
+				string rep_s(" - ");
+				if ( this->m_items.size() > tailN ) {
+					auto ptr = this->m_items.end();
+					ptr -= tailN;
+
+					do
+					{
+						ss << (*ptr).ToString() << endl;
+					} while (++ptr != this->m_items.end());
+				}
+				else {
+					for (auto i : this->m_items)
+					{
+						ss << i.ToString() << endl;
+					}
+				}
+
+				string retVal = ss.str();
+				return retVal;
 			}
 		};
 

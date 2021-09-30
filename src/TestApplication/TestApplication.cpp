@@ -325,7 +325,7 @@ void TestItsLog()
 {
 	PrintTestHeader("ItsLog");
 
-    ItsLog log;
+    ItsLog log("ItsTestApp",true);
     log.LogInformation("This is an information log item");
     log.LogWarning("This is an warning log item");
     log.LogError("This is an error log item");
@@ -522,17 +522,16 @@ void TestItsGuid()
     {
         cout << "> Success" << endl;
         
-        ItsGuidFormat fmt;
-        cout << "ItsGuid::ToString(guid,fmt.RegistryFormat)" << endl;
-        cout << R"(> ")" << ItsGuid::ToString(guid, fmt.RegistryFormat) << R"(")" << endl;
-        cout << "ItsGuid::ToString(guid, fmt.RegistryFormatStripped)" << endl;
-        cout << R"(> ")" << ItsGuid::ToString(guid, fmt.RegistryFormatStripped) << R"(")" << endl;
-        cout << "ItsGuid::ToString(guid,fmt.ConstFormat)" << endl;
-        cout << R"(> ")" << ItsGuid::ToString(guid, fmt.ConstFormat) << R"(")" << endl;
-        cout << "ItsGuid::ToString(guid,fmt.CompactFormat)" << endl;
-        cout << R"(> ")" << ItsGuid::ToString(guid, fmt.CompactFormat) << R"(")" << endl;
-        cout << "ItsGuid::ToString(guid,fmt.PrefixedCompactFormat)" << endl;
-        cout << R"(> ")" << ItsGuid::ToString(guid, fmt.PrefixedCompactFormat) << R"(")" << endl;
+        cout << "ItsGuid::ToString(guid,ItsGuidFormat::MicrosoftRegistryFormat, true)" << endl;
+        cout << R"(> ")" << ItsGuid::ToString(guid, ItsGuidFormat::MicrosoftRegistryFormat, true) << R"(")" << endl;
+        cout << "ItsGuid::ToString(guid, ItsGuidFormat::MicrosoftRegistryFormatStripped, true)" << endl;
+        cout << R"(> ")" << ItsGuid::ToString(guid, ItsGuidFormat::MicrosoftRegistryFormatStripped, true) << R"(")" << endl;
+        cout << "ItsGuid::ToString(guid,ItsGuidFormat::MicrosoftConstFormat, true)" << endl;
+        cout << R"(> ")" << ItsGuid::ToString(guid, ItsGuidFormat::MicrosoftConstFormat, true) << R"(")" << endl;
+        cout << "ItsGuid::ToString(guid,ItsGuidFormat::MicrosoftCompactFormat, true)" << endl;
+        cout << R"(> ")" << ItsGuid::ToString(guid, ItsGuidFormat::MicrosoftCompactFormat, true) << R"(")" << endl;
+        cout << "ItsGuid::ToString(guid,ItsGuidFormat::MicrosoftPrefixedCompactFormat, true)" << endl;
+        cout << R"(> ")" << ItsGuid::ToString(guid, ItsGuidFormat::MicrosoftPrefixedCompactFormat, true) << R"(")" << endl;
     }
     else {
         cout << "> FAILED: " << ItsError::GetLastErrorDescription() << endl;

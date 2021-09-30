@@ -171,17 +171,17 @@ namespace ItSoftware
                 }
             };
 
-            //
+             //
             // struct: ItsGuidFormat
             //
             // (i): Container for premade Guid format strings.
             //
             struct ItsGuidFormat {
-                const string RegistryFormat{ "{%08lX-%04X-%04x-%02X%02X-%02X%02X%02X%02X%02X%02X}" };
-                const string RegistryFormatStripped{ "%08lX-%04X-%04x-%02X%02X-%02X%02X%02X%02X%02X%02X" };
-                const string ConstFormat{ "{ 0x%lx, 0x%x, 0x%x, { 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x } }" };
-                const string CompactFormat{ "%08lX%04X%04x%02X%02X%02X%02X%02X%02X%02X%02X" };
-                const string PrefixedCompactFormat{ "GUID%08lX%04X%04x%02X%02X%02X%02X%02X%02X%02X%02X" };
+                inline static constexpr const char* MicrosoftRegistryFormat{"{%08lX-%04X-%04x-%02X%02X-%02X%02X%02X%02X%02X%02X}"};
+                inline static constexpr const char* MicrosoftRegistryFormatStripped{ "%08lX-%04X-%04x-%02X%02X-%02X%02X%02X%02X%02X%02X" };
+                inline static constexpr const char* MicrosoftConstFormat{ "{ 0x%lx, 0x%x, 0x%x, { 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x } }" };
+                inline static constexpr const char* MicrosoftCompactFormat{ "%08lX%04X%04x%02X%02X%02X%02X%02X%02X%02X%02X" };
+                inline static constexpr const char* MicrosoftPrefixedCompactFormat{ "GUID%08lX%04X%04x%02X%02X%02X%02X%02X%02X%02X%02X" };
             };
 
             //
@@ -204,17 +204,22 @@ namespace ItSoftware
                     return true;
                 }
                 static string ToString(uuid_t guid) {
-                    ItsGuidFormat fmt;
-                    return ItsGuid::ToString(guid, fmt.RegistryFormat);
+                    return ItsGuid::ToString(guid, ItsGuidFormat::MicrosoftRegistryFormat, true);
                 }
-                static string ToString(uuid_t guid, string format) {
+                static string ToString(uuid_t guid, string format, bool isMicrosoftGuidFormat) {
                     char szBuffer[100];
                     memset(szBuffer, 0, 100);
 
-                    sprintf(szBuffer, format.c_str(),
-                        *reinterpret_cast<uint32_t*>(&guid[0]), *reinterpret_cast<uint16_t*>(&guid[4]), *reinterpret_cast<uint16_t*>(&guid[6]),
-                        guid[8], guid[9], guid[10], guid[11], guid[12], guid[13], guid[14], guid[15]);
-
+                    if (isMicrosoftGuidFormat) {
+                        sprintf(szBuffer, format.c_str(),
+                            *reinterpret_cast<uint32_t*>(&guid[0]), *reinterpret_cast<uint16_t*>(&guid[4]), *reinterpret_cast<uint16_t*>(&guid[6]),
+                            guid[8], guid[9], guid[10], guid[11], guid[12], guid[13], guid[14], guid[15]);
+                    }
+                    else {
+                        sprintf(szBuffer, format.c_str(),
+                            guid[0], guid[1], guid[2], guid[3], guid[4], guid[5], guid[6], guid[7],
+                            guid[8], guid[9], guid[10], guid[11], guid[12], guid[13], guid[14], guid[15]);
+                    }
                     return string(szBuffer);
                 }
             };
