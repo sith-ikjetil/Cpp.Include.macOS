@@ -21,6 +21,9 @@ using std::endl;
 using std::ends;
 using std::string;
 using std::stringstream;
+using std::vector;
+using std::unique_ptr;
+using std::make_unique;
 using ItSoftware::macOS::ItsString;
 using ItSoftware::macOS::ItsExpandDirection;
 using ItSoftware::macOS::ItsTime;
@@ -39,6 +42,8 @@ using ItSoftware::macOS::Core::ItsGuidFormat;
 using ItSoftware::macOS::Core::ItsPath;
 using ItSoftware::macOS::Core::ItsDirectory;
 using ItSoftware::macOS::Core::ItsError;
+using ItSoftware::macOS::Core::ItsFileMonitor;
+using ItSoftware::macOS::Core::ItsFileMonitorEvent;
 
 //
 // Function Prototypes
@@ -56,6 +61,8 @@ void TestItsID();
 void TestItsGuid();
 void TestItsPath();
 void TestItsDirectory();
+void TestItsFileMonitorStart();
+void TestItsFileMonitorStop();
 void ExitFn();
 void PrintTestHeader(string txt);
 
@@ -70,6 +77,8 @@ string g_path2("/kjetilso/test.txt");
 string g_invalidPath("Users\0/kjetilso");
 string g_directoryRoot("/Users/kjetilso");
 string g_creatDir("/Users/kjetilso/testdir");
+vector<string> g_fileMonNames;
+unique_ptr<ItsFileMonitor> g_fm;
 
 //
 // Function: ExitFn
@@ -80,6 +89,16 @@ void ExitFn()
 {
     cout << endl;
     cout << "> Test Application - Exited <" << endl;
+}
+
+//
+// Function: HandleFileEvent
+//
+// (i): copy file event names
+//
+void HandleFileEvent(ItsFileMonitorEvent& event)
+{
+    g_fileMonNames.push_back(event.path);
 }
 
 //
@@ -94,6 +113,7 @@ int main(int argc, char* argv[])
     cout << "> Test Application - Started <" << endl;
 
 	TestItsTimerStart();
+    TestItsFileMonitorStart();
     TestItsConvert();
     TestItsRandom();
     TestItsTime();
@@ -105,6 +125,7 @@ int main(int argc, char* argv[])
     TestItsGuid();
     TestItsPath();
     TestItsDirectory();
+    TestItsFileMonitorStop();
 	TestItsTimerStop();
 
     return EXIT_SUCCESS;
@@ -626,6 +647,40 @@ void TestItsDirectory()
         return;
     }
     cout << "> Success removing directory " << cdir << endl;
+
+    cout << endl;
+}
+
+//
+// Function: TestItsFileMonitor
+//
+// (i): Tests ItsFileMonitor.
+//
+void TestItsFileMonitorStart()
+{
+    g_fm = make_unique<ItsFileMonitor>(g_directoryRoot, HandleFileEvent);  
+
+    PrintTestHeader("ItsFileMonitor Start");
+    cout << "File monitor monitoring directory '" << g_directoryRoot << "'" << endl;
+    
+    cout << endl;
+}
+
+//
+// Function: TestItsFileMonitor
+//
+// (i): Tests ItsFileMonitor.
+//
+void TestItsFileMonitorStop()
+{
+    g_fm->Stop();
+
+    PrintTestHeader("ItsFileMonitor Stop");
+    cout << "File monitor monitoring directory '" << g_directoryRoot << "'" << endl;
+    cout << "Items found:" << endl;
+    for ( auto i : g_fileMonNames ) {
+        cout << ">> " << i << endl;
+    }
 
     cout << endl;
 }

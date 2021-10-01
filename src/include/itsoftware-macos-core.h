@@ -23,6 +23,9 @@
 #include <vector>
 #include <uuid/uuid.h>
 #include <signal.h>
+#include <thread>
+#include <functional>
+#include <CoreServices/CoreServices.h>
 #include "itsoftware-macos.h"
 
 //
@@ -47,6 +50,8 @@ namespace ItSoftware
             using std::string;
             using std::unique_ptr;
             using std::vector;
+            using std::thread;
+            using std::function;
             using ItSoftware::macOS::ItsString;
 
             //
@@ -130,11 +135,11 @@ namespace ItSoftware
 
                 size_t LapNanoseconds()
                 {
-                	if (!this->IsRunning())
-                	{
-                		return 0;
-                	}
-                	return (this->GetTickCount() - this->m_start);
+                    if (!this->IsRunning())
+                    {
+                        return 0;
+                    }
+                    return (this->GetTickCount() - this->m_start);
                 }
 
                 size_t GetSeconds()
@@ -169,11 +174,11 @@ namespace ItSoftware
 
                 size_t GetNanoseconds()
                 {
-                	if (this->IsRunning())
-                	{
-                		return 0;
-                	}
-                	return (this->m_end - this->m_start);
+                    if (this->IsRunning())
+                    {
+                        return 0;
+                    }
+                    return (this->m_end - this->m_start);
                 }
             };
 
@@ -232,7 +237,7 @@ namespace ItSoftware
 
             //
             // struct: ItsPath
-            // 
+            //
             // (i): Path routines.
             //
             struct ItsPath
@@ -284,7 +289,7 @@ namespace ItSoftware
                     }
                     return false;
                 }
-                static string GetDirectory(string path) 
+                static string GetDirectory(string path)
                 {
                     if (path.size() == 0) {
                         return string("");
@@ -300,7 +305,7 @@ namespace ItSoftware
                     }
                     return path.substr(0, i+1);
                 }
-                static string GetFilename(string path) 
+                static string GetFilename(string path)
                 {
                     if (path.size() == 0) {
                         return string("");
@@ -380,7 +385,7 @@ namespace ItSoftware
 
                     return (strcmp(ext.c_str(), extension.c_str()) == 0);
                 }
-                static string ChangeExtension(string path, string newExtension) 
+                static string ChangeExtension(string path, string newExtension)
                 {
                     if (path.size() == 0) {
                         return string("");
@@ -423,7 +428,7 @@ namespace ItSoftware
             struct ItsError
             {
             public:
-                static string GetErrorDescription(int err) 
+                static string GetErrorDescription(int err)
                 {
                     return strerror(err);
                 }
@@ -435,7 +440,7 @@ namespace ItSoftware
 
             //
             // struct: ItsDirectory
-            // 
+            //
             // (i): macOS directory routines.
             //
             struct ItsDirectory
@@ -588,7 +593,7 @@ namespace ItSoftware
                 //
                 string GetFilename()
                 {
-	           		return this->m_filename;
+                       return this->m_filename;
                 }
 
                 //
@@ -653,7 +658,7 @@ namespace ItSoftware
                         return false;
                     }
 
-	            	this->m_filename = filename;
+                    this->m_filename = filename;
                     return true;
                 }
 
@@ -715,13 +720,13 @@ namespace ItSoftware
                     {
                         return false;
                     }
-                    if (fchmod(this->m_fd, mode) != 0 )   
+                    if (fchmod(this->m_fd, mode) != 0 )
                     {
                         this->Close();
                         return false;
                     }
 
-	            	this->m_filename = filename;
+                    this->m_filename = filename;
 
                     return true;
                 }
@@ -798,7 +803,7 @@ namespace ItSoftware
                     this->SetPosFromBeg(0);
 
                     string str;
-                    if (!this->ReadAllText(str)) 
+                    if (!this->ReadAllText(str))
                     {
                         return false;
                     }
@@ -815,7 +820,7 @@ namespace ItSoftware
                         return false;
                     }
 
-                    if (lseek(this->m_fd, offset, SEEK_SET) == -1) 
+                    if (lseek(this->m_fd, offset, SEEK_SET) == -1)
                     {
                         return false;
                     }
@@ -830,7 +835,7 @@ namespace ItSoftware
                         return false;
                     }
 
-                    if (lseek(this->m_fd, offset, SEEK_END) == -1) 
+                    if (lseek(this->m_fd, offset, SEEK_END) == -1)
                     {
                         return false;
                     }
@@ -845,7 +850,7 @@ namespace ItSoftware
                         return false;
                     }
 
-                    if (lseek(this->m_fd, offset, SEEK_CUR) == -1) 
+                    if (lseek(this->m_fd, offset, SEEK_CUR) == -1)
                     {
                         return false;
                     }
@@ -966,22 +971,22 @@ namespace ItSoftware
 
                 static int CreateMode(string user, string group, string other)
                 {
-                	int mode(0);
+                    int mode(0);
 
-                	if (user.size() > 0)
-                	{
-                		if (user.find('r',0) != string::npos) {
-							mode |= S_IRUSR;
-                		}
-                		if (user.find('w',0) != string::npos) {
-							mode |= S_IWUSR;
-                		}
-                		if (user.find('x',0) != string::npos) {
-							mode |= S_IXUSR;
-                		}
-                	}
+                    if (user.size() > 0)
+                    {
+                        if (user.find('r',0) != string::npos) {
+                            mode |= S_IRUSR;
+                        }
+                        if (user.find('w',0) != string::npos) {
+                            mode |= S_IWUSR;
+                        }
+                        if (user.find('x',0) != string::npos) {
+                            mode |= S_IXUSR;
+                        }
+                    }
 
-                	if (group.size() > 0)
+                    if (group.size() > 0)
                     {
                          if (group.find('r',0) != string::npos) {
                              mode |= S_IRGRP;
@@ -994,7 +999,7 @@ namespace ItSoftware
                          }
                     }
 
-					if (other.size() > 0)
+                    if (other.size() > 0)
                     {
                         if (other.find('r',0) != string::npos) {
                              mode |= S_IROTH;
@@ -1007,7 +1012,165 @@ namespace ItSoftware
                         }
                     }
 
-                	return mode;
+                    return mode;
+                }
+            };
+
+            //
+            // struct: ItsFileMonitorEvent
+            //
+            // (i): file monitor event object
+            //
+            struct ItsFileMonitorEvent {
+                FSEventStreamEventId eventId;
+                FSEventStreamEventFlags eventFlag;
+                string path;
+            };
+
+            //
+            // class: ItsFileMonitor
+            //
+            // (i): Monitors a given file folder
+            //
+            class ItsFileMonitor
+            {
+            private:
+                function<void(ItsFileMonitorEvent&)> m_func;
+                FSEventStreamRef m_stream;
+                FSEventStreamCallback m_callback;
+                FSEventStreamContext* m_callbackContext = nullptr; // put stream specific data here
+                CFStringRef m_refPathname;
+                CFArrayRef m_pathsToWatch;
+                CFAbsoluteTime m_latency = 1; // latency in seconds
+                unique_ptr<thread> m_pthread;
+                string m_pathname;
+                bool m_bPaused;
+                bool m_bStopped;
+                uint32_t m_flags;
+                inline static vector<ItsFileMonitor*> s_objects{};
+            protected:
+                void ExecuteDispatchThread() {
+                    /*
+                        1. done.
+                        2. The application schedules the stream on the run loop by calling FSEventStreamScheduleWithRunLoop.
+                    */
+                    FSEventStreamScheduleWithRunLoop(this->m_stream, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
+
+                    /*
+                        1. done.
+                        2. done.
+                        3. The application tells the file system events daemon to start sending events by calling FSEventStreamStart.
+                    */
+                    FSEventStreamStart(this->m_stream);
+
+                    while (!this->m_bStopped ) {
+                        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                    }
+
+                    /*
+                        5. The application tells the daemon to stop sending events by calling FSEventStreamStop.
+                        6. If the application needs to restart the stream, go to step 3.
+                        7. The application unschedules the event from its run loop by calling FSEventStreamUnscheduleFromRunLoop.
+                        8. The application invalidates the stream by calling FSEventStreamInvalidate.
+                        9. The application releases its reference to the stream by calling FSEventStreamRelease.
+                    */
+                    FSEventStreamStop(this->m_stream);
+                    FSEventStreamUnscheduleFromRunLoop(this->m_stream, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
+                    FSEventStreamInvalidate(this->m_stream);
+                    FSEventStreamRelease(this->m_stream);
+                }
+
+                
+
+                static void MonitorCallback(
+                    ConstFSEventStreamRef streamRef,
+                    void *clientCallBackInfo,
+                    size_t numEvents,
+                    void *eventPaths,
+                    const FSEventStreamEventFlags eventFlags[],
+                    const FSEventStreamEventId eventIds[])
+                {
+                    for ( auto obj : ItsFileMonitor::s_objects ) {
+                        if ( obj->m_stream == streamRef ) {
+                            if ( obj->m_bPaused || obj->m_bStopped ) {
+                                return;
+                            }
+
+                            char **paths = reinterpret_cast<char **>(eventPaths);
+                            for (int i = 0; i < numEvents; i++) {
+                                ItsFileMonitorEvent event{0};
+                                event.eventId = eventIds[i];
+                                event.eventFlag = eventFlags[i];
+                                event.path = paths[i];
+                                
+                                obj->m_func(event);
+                            }
+                            
+                            break;
+                        }
+                    }
+                }
+
+            public:
+                ItsFileMonitor(const string pathname, function<void(ItsFileMonitorEvent&)> func)
+                    : ItsFileMonitor(pathname, kFSEventStreamCreateFlagWatchRoot | kFSEventStreamCreateFlagFileEvents, func)
+                {
+                    
+                }
+                ItsFileMonitor(const string pathname, uint32_t flags, function<void(ItsFileMonitorEvent&)> func)
+                    :   m_pathname(pathname),
+                        m_func(func),
+                        m_flags(flags),
+                        m_bPaused(false),
+                        m_bStopped(false)
+                {
+                    if (ItsFile::Exists(this->m_pathname) ) {
+                        /*
+                            1. The application creates a stream by calling FSEventStreamCreate or FSEventStreamCreateRelativeToDevice.
+                        */
+                        this->m_callback = &ItsFileMonitor::MonitorCallback;
+                        this->m_refPathname = CFStringRef(pathname.c_str());
+                        this->m_pathsToWatch = CFArrayCreate(nullptr, (const void**)&this->m_refPathname,1,nullptr);
+                        
+                        // 1.
+                        this->m_stream = FSEventStreamCreate(kCFAllocatorDefault,
+                                                    this->m_callback,
+                                                    this->m_callbackContext,
+                                                    this->m_pathsToWatch,
+                                                    kFSEventStreamEventIdSinceNow,
+                                                    this->m_latency,
+                                                    this->m_flags);
+
+                        if ( this->m_stream != nullptr ) {
+                            ItsFileMonitor::s_objects.push_back(this);
+                            this->m_pthread = make_unique<thread>(&ItsFileMonitor::ExecuteDispatchThread, this);
+                        }
+                    }
+                }
+                void Pause() {
+                    this->m_bPaused = true;
+                }
+                void Resume() {
+                    this->m_bPaused = false;
+                }
+                bool IsPaused() {
+                    return this->m_bPaused;
+                }
+                void Stop() {
+                    this->m_bStopped = true;
+                }
+                bool IsStopped()
+                {
+                    return this->m_bStopped;
+                }
+                ~ItsFileMonitor()
+                {
+                    this->Stop();
+                    if ( this->m_pthread.operator->() != nullptr ) {
+                        if ( this->m_pthread->joinable() ) {
+                            this->m_pthread->join();
+                        }
+                    }
                 }
             };
         } // namespace Core
