@@ -677,6 +677,7 @@ void TestItsFileMonitorStart()
 //
 void TestItsFileMonitorStop()
 {
+    std::this_thread::sleep_for(std::chrono::seconds(1)); // allow for delay in receiving file data
     g_fm->Stop();
 
     PrintTestHeader("ItsFileMonitor Stop");

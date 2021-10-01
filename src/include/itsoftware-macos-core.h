@@ -1041,7 +1041,7 @@ namespace ItSoftware
                 FSEventStreamContext* m_callbackContext = nullptr; // put stream specific data here
                 CFStringRef m_refPathname;
                 CFArrayRef m_pathsToWatch;
-                CFAbsoluteTime m_latency = 1; // latency in seconds
+                CFAbsoluteTime m_latency = 0.0; // latency in seconds
                 unique_ptr<thread> m_pthread;
                 string m_pathname;
                 bool m_bPaused;
@@ -1063,10 +1063,8 @@ namespace ItSoftware
                     */
                     FSEventStreamStart(this->m_stream);
 
-                    while (!this->m_bStopped ) {
-                        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                    }
-
+                    CFRunLoopRun(); //
+                    
                     /*
                         5. The application tells the daemon to stop sending events by calling FSEventStreamStop.
                         6. If the application needs to restart the stream, go to step 3.
@@ -1092,7 +1090,11 @@ namespace ItSoftware
                 {
                     for ( auto obj : ItsFileMonitor::s_objects ) {
                         if ( obj->m_stream == streamRef ) {
-                            if ( obj->m_bPaused || obj->m_bStopped ) {
+                            if ( obj->m_bPaused ) {
+                                return;
+                            }
+                            if ( obj->m_bStopped ) {
+                                CFRunLoopStop(CFRunLoopGetCurrent());
                                 return;
                             }
 
@@ -1129,11 +1131,12 @@ namespace ItSoftware
                             1. The application creates a stream by calling FSEventStreamCreate or FSEventStreamCreateRelativeToDevice.
                         */
                         this->m_callback = &ItsFileMonitor::MonitorCallback;
-                        this->m_refPathname = CFStringRef(pathname.c_str());
+                        this->m_refPathname = CFStringCreateWithCString(kCFAllocatorDefault, pathname.c_str(), kCFStringEncodingUTF8);
                         this->m_pathsToWatch = CFArrayCreate(nullptr, (const void**)&this->m_refPathname,1,nullptr);
                         
                         // 1.
-                        this->m_stream = FSEventStreamCreate(kCFAllocatorDefault,
+                        this->m_stream = FSEventStreamCreate(
+                                                    kCFAllocatorDefault,
                                                     this->m_callback,
                                                     this->m_callbackContext,
                                                     this->m_pathsToWatch,
