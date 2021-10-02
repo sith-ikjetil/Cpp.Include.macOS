@@ -1080,7 +1080,12 @@ namespace ItSoftware
                     */
                     FSEventStreamStart(this->m_stream);
 
-                    CFRunLoopRun(); //
+                    CFRunLoopRef runLoop = CFRunLoopGetCurrent();
+                    CFRunLoopTimerContext context = {0, this, NULL, NULL, NULL};
+                    CFRunLoopTimerRef timer = CFRunLoopTimerCreate(kCFAllocatorDefault, 0.030, 0.030, 0, 0, &MyRunLoopCallback, &context); 
+                    CFRunLoopAddTimer(runLoop, timer, kCFRunLoopCommonModes);
+                    
+                    CFRunLoopRun();
                     
                     /*
                         5. The application tells the daemon to stop sending events by calling FSEventStreamStop.
@@ -1095,7 +1100,13 @@ namespace ItSoftware
                     FSEventStreamRelease(this->m_stream);
                 }
 
-                
+                static void MyRunLoopCallback(CFRunLoopTimerRef timer, void *info)
+                {
+                    ItsFileMonitor* pthis = reinterpret_cast<ItsFileMonitor*>(info);
+                    if ( pthis->m_bStopped ) {
+                        CFRunLoopStop(CFRunLoopGetCurrent());
+                    }
+                }
 
                 static void MonitorCallback(
                     ConstFSEventStreamRef streamRef,
@@ -1107,11 +1118,11 @@ namespace ItSoftware
                 {
                     for ( auto obj : ItsFileMonitor::s_objects ) {
                         if ( obj->m_stream == streamRef ) {
-                            if ( obj->m_bPaused ) {
-                                return;
-                            }
                             if ( obj->m_bStopped ) {
                                 CFRunLoopStop(CFRunLoopGetCurrent());
+                                return;
+                            }
+                            if ( obj->m_bPaused ) {
                                 return;
                             }
 
@@ -1186,10 +1197,14 @@ namespace ItSoftware
                 ~ItsFileMonitor()
                 {
                     this->Stop();
-                    if ( this->m_pthread.operator->() != nullptr ) {
-                        if ( this->m_pthread->joinable() ) {
-                            this->m_pthread->join();
-                        }
+                    
+                    if ( this->m_pthread->joinable() ) {
+                        this->m_pthread->join();
+                    }
+
+                    auto itr = std::find(begin(ItsFileMonitor::s_objects), end(ItsFileMonitor::s_objects), this);
+                    if ( itr != end(ItsFileMonitor::s_objects) ) {
+                        ItsFileMonitor::s_objects.erase(itr);
                     }
                 }
             };
