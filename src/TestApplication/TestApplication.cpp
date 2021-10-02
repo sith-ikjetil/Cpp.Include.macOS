@@ -44,6 +44,7 @@ using ItSoftware::macOS::Core::ItsDirectory;
 using ItSoftware::macOS::Core::ItsError;
 using ItSoftware::macOS::Core::ItsFileMonitor;
 using ItSoftware::macOS::Core::ItsFileMonitorEvent;
+using ItSoftware::macOS::Core::ItsFileMonitorMask;
 
 //
 // Function Prototypes
@@ -662,10 +663,10 @@ void TestItsDirectory()
 //
 void TestItsFileMonitorStart()
 {
-    g_fm = make_unique<ItsFileMonitor>(g_directoryRoot, HandleFileEvent);  
-
+    g_fm = make_unique<ItsFileMonitor>(g_directoryRoot, (ItsFileMonitorMask::FileEvents), HandleFileEvent);  
+    
     PrintTestHeader("ItsFileMonitor Start");
-    cout << "File monitor monitoring directory '" << g_directoryRoot << "'" << endl;
+    cout << "File monitor monitoring directory '" << g_directoryRoot << "' with mask 'ItsFileMonitorMask::FileEvents'" << endl;
     
     cout << endl;
 }
@@ -681,7 +682,7 @@ void TestItsFileMonitorStop()
     g_fm->Stop();
 
     PrintTestHeader("ItsFileMonitor Stop");
-    cout << "File monitor monitoring directory '" << g_directoryRoot << "'" << endl;
+    cout << "File monitor monitoring directory '" << g_directoryRoot << "' with mask 'ItsFileMonitorMask::FileEvents'" << endl;
     cout << "Items found:" << endl;
     for ( auto i : g_fileMonNames ) {
         cout << ">> " << i << endl;

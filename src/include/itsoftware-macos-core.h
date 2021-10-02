@@ -1033,15 +1033,15 @@ namespace ItSoftware
             // (i): mask to set what events you want
             //
             enum ItsFileMonitorMask : uint32_t {
-                FlagNone = 0x00,
-                UseCFTypes = 0x001,
-                NoDefer = 0x02,
-                WatchRoot = 0x04,
-                IgnoreSelf = 0x08,
-                FileEvents = 0x10,
-                MarkSelf = 0x20,
-                UseExtendedData = 0x40,
-                FullHistory = 0x80,
+                None = kFSEventStreamCreateFlagNone,
+                UseCFTypes = kFSEventStreamCreateFlagUseCFTypes,
+                NoDefer = kFSEventStreamCreateFlagNoDefer,
+                WatchRoot = kFSEventStreamCreateFlagWatchRoot,
+                IgnoreSelf = kFSEventStreamCreateFlagIgnoreSelf,
+                FileEvents = kFSEventStreamCreateFlagFileEvents,
+                MarkSelf = kFSEventStreamCreateFlagMarkSelf,
+                UseExtendedData = kFSEventStreamCreateFlagUseExtendedData,
+                FullHistory = kFSEventStreamCreateFlagFullHistory,
             };
 
             //
