@@ -1028,6 +1028,23 @@ namespace ItSoftware
             };
 
             //
+            // enum: ItsFileMonitorMask
+            //
+            // (i): mask to set what events you want
+            //
+            enum ItsFileMonitorMask : uint32_t {
+                FlagNone = 0x00,
+                UseCFTypes = 0x001,
+                NoDefer = 0x02,
+                WatchRoot = 0x04,
+                IgnoreSelf = 0x08,
+                FileEvents = 0x10,
+                MarkSelf = 0x20,
+                UseExtendedData = 0x40,
+                FullHistory = 0x80,
+            };
+
+            //
             // class: ItsFileMonitor
             //
             // (i): Monitors a given file folder
@@ -1046,7 +1063,7 @@ namespace ItSoftware
                 string m_pathname;
                 bool m_bPaused;
                 bool m_bStopped;
-                uint32_t m_flags;
+                uint32_t m_mask;
                 inline static vector<ItsFileMonitor*> s_objects{};
             protected:
                 void ExecuteDispatchThread() {
@@ -1115,14 +1132,14 @@ namespace ItSoftware
 
             public:
                 ItsFileMonitor(const string pathname, function<void(ItsFileMonitorEvent&)> func)
-                    : ItsFileMonitor(pathname, kFSEventStreamCreateFlagWatchRoot | kFSEventStreamCreateFlagFileEvents, func)
+                    : ItsFileMonitor(pathname, (ItsFileMonitorMask::FileEvents), func)
                 {
                     
                 }
-                ItsFileMonitor(const string pathname, uint32_t flags, function<void(ItsFileMonitorEvent&)> func)
+                ItsFileMonitor(const string pathname, uint32_t mask, function<void(ItsFileMonitorEvent&)> func)
                     :   m_pathname(pathname),
                         m_func(func),
-                        m_flags(flags),
+                        m_mask(mask),
                         m_bPaused(false),
                         m_bStopped(false)
                 {
@@ -1142,7 +1159,7 @@ namespace ItSoftware
                                                     this->m_pathsToWatch,
                                                     kFSEventStreamEventIdSinceNow,
                                                     this->m_latency,
-                                                    this->m_flags);
+                                                    this->m_mask);
 
                         if ( this->m_stream != nullptr ) {
                             ItsFileMonitor::s_objects.push_back(this);
