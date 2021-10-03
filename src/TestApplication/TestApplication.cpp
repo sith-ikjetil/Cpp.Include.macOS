@@ -66,6 +66,7 @@ void TestItsFileMonitorStart();
 void TestItsFileMonitorStop();
 void ExitFn();
 void PrintTestHeader(string txt);
+void HandleFileEvent(ItsFileMonitorEvent& event);
 
 //
 // global data
@@ -90,16 +91,6 @@ void ExitFn()
 {
     cout << endl;
     cout << "> Test Application - Exited <" << endl;
-}
-
-//
-// Function: HandleFileEvent
-//
-// (i): copy file event names
-//
-void HandleFileEvent(ItsFileMonitorEvent& event)
-{
-    g_fileMonNames.push_back(event.path);
 }
 
 //
@@ -689,4 +680,89 @@ void TestItsFileMonitorStop()
     }
 
     cout << endl;
+}
+
+//
+// Function: HandleFileEvent
+//
+// (i): copy file event names
+//
+void HandleFileEvent(ItsFileMonitorEvent& event)
+{
+    stringstream ss;
+    ss << "Name: " << event.path << ", Flag: ";
+    if (event.eventFlag & kFSEventStreamEventFlagNone) {
+        ss << "[kFSEventStreamEventFlagNone] ";
+    }
+    if (event.eventFlag & kFSEventStreamEventFlagMustScanSubDirs) {
+        ss << "[kFSEventStreamEventFlagMustScanSubDirs] ";
+    }
+    if (event.eventFlag & kFSEventStreamEventFlagUserDropped) {
+        ss << "[kFSEventStreamEventFlagUserDropped] ";
+    }
+    if (event.eventFlag & kFSEventStreamEventFlagKernelDropped) {
+        ss << "[kFSEventStreamEventFlagKernelDropped] ";
+    }
+    if (event.eventFlag & kFSEventStreamEventFlagEventIdsWrapped) {
+        ss << "[kFSEventStreamEventFlagEventIdsWrapped] ";
+    }
+    if (event.eventFlag & kFSEventStreamEventFlagHistoryDone) {
+        ss << "[kFSEventStreamEventFlagHistoryDone] ";
+    }
+    if (event.eventFlag & kFSEventStreamEventFlagRootChanged) {
+        ss << "[kFSEventStreamEventFlagRootChanged] ";
+    }
+    if (event.eventFlag & kFSEventStreamEventFlagMount) {
+        ss << "[kFSEventStreamEventFlagMount] ";
+    }
+    if (event.eventFlag & kFSEventStreamEventFlagUnmount) {
+        ss << "[kFSEventStreamEventFlagUnmount] ";
+    }
+    if (event.eventFlag & kFSEventStreamEventFlagItemChangeOwner) {
+        ss << "[kFSEventStreamEventFlagItemChangeOwner] ";
+    }
+    if (event.eventFlag & kFSEventStreamEventFlagItemCreated) {
+        ss << "[kFSEventStreamEventFlagItemCreated] ";
+    }
+    if (event.eventFlag & kFSEventStreamEventFlagItemFinderInfoMod) {
+        ss << "[kFSEventStreamEventFlagItemFinderInfoMod] ";
+    }
+    if (event.eventFlag & kFSEventStreamEventFlagItemInodeMetaMod) {
+        ss << "[kFSEventStreamEventFlagItemInodeMetaMod] ";
+    }
+    if (event.eventFlag & kFSEventStreamEventFlagItemIsDir) {
+        ss << "[kFSEventStreamEventFlagItemIsDir] ";
+    }
+    if (event.eventFlag & kFSEventStreamEventFlagItemIsFile) {
+        ss << "[kFSEventStreamEventFlagItemIsFile] ";
+    }
+    if (event.eventFlag & kFSEventStreamEventFlagItemIsHardlink) {
+        ss << "[kFSEventStreamEventFlagItemIsHardlink] ";
+    }
+    if (event.eventFlag & kFSEventStreamEventFlagItemIsLastHardlink) {
+        ss << "[kFSEventStreamEventFlagItemIsLastHardlink] ";
+    }
+    if (event.eventFlag & kFSEventStreamEventFlagItemIsSymlink) {
+        ss << "[kFSEventStreamEventFlagItemIsSymlink] ";
+    }
+    if (event.eventFlag & kFSEventStreamEventFlagItemModified) {
+        ss << "[kFSEventStreamEventFlagItemModified] ";
+    }
+    if (event.eventFlag & kFSEventStreamEventFlagItemRemoved) {
+        ss << "[kFSEventStreamEventFlagItemRemoved] ";
+    }
+    if (event.eventFlag & kFSEventStreamEventFlagItemRenamed) {
+        ss << "[kFSEventStreamEventFlagItemRenamed] ";
+    }
+    if (event.eventFlag & kFSEventStreamEventFlagItemXattrMod) {
+        ss << "[kFSEventStreamEventFlagItemXattrMod] ";
+    }
+    if (event.eventFlag & kFSEventStreamEventFlagOwnEvent) {
+        ss << "[kFSEventStreamEventFlagOwnEvent] ";
+    }
+    if (event.eventFlag & kFSEventStreamEventFlagItemCloned) {
+        ss << "[kFSEventStreamEventFlagItemCloned] ";
+    }
+
+    g_fileMonNames.push_back(ss.str());
 }
