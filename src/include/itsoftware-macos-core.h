@@ -932,7 +932,7 @@ namespace ItSoftware
                     else
                     {
                         int mode = 0;
-                        ItsFile::Mode(sourceFilename, &mode);
+                        ItsFile::GetMode(sourceFilename, &mode);
                         target.OpenOrCreate(targetFilename.c_str(), "wt", mode);
                     }
 
@@ -1029,6 +1029,44 @@ namespace ItSoftware
                     }
 
                     return mode;
+                }
+
+                static bool Shred(string filename, bool alsoDelete) 
+                {    
+                    if (!ItsFile::Exists(filename))
+                    {
+                        return false;
+                    }
+
+                    const size_t fileSize = ItsFile::GetFileSize(filename);
+                    if (fileSize == 0 ) {
+                        return false;
+                    }
+
+                    ItsFile f;
+                    f.OpenExisting(filename.c_str(), "rw");
+                    if (f.IsInvalid())
+                    {
+                        return false;
+                    }
+
+                    const uint32_t bufferSize = 2048;
+                    size_t bytesWritten = 0;
+                    const unique_ptr<uint8_t[]> pdata = make_unique<uint8_t[]>(bufferSize);
+                    for (uint32_t i = 0; i < bufferSize; i++){
+                        pdata[i] = 0xFF;
+                    }
+                    f.SetPosFromBeg(0);
+                    while ( bytesWritten < fileSize ) {
+                        f.Write(static_cast<const void*>(pdata.get()), ((fileSize-bytesWritten) > bufferSize) ? bufferSize : (fileSize-bytesWritten), &bytesWritten);
+                    }
+                    f.Close();
+
+                    if (alsoDelete) {
+                        return ItsFile::Delete(filename);
+                    }
+
+                    return true;
                 }
             };
 

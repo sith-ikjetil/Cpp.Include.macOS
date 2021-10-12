@@ -76,6 +76,7 @@ void HandleFileEvent(ItsFileMonitorEvent& event);
 ItsTimer g_timer;
 char g_filename[] = "/Users/kjetilso/test.txt";
 char g_copyToFilename[] = "/Users/kjetilso/test2.txt";
+char g_shredFilename[] = "/Users/kjetilso/test2shred.txt";
 string g_path1("/Users");
 string g_path2("/kjetilso/test.txt");
 string g_invalidPath("Users\0/kjetilso");
@@ -418,6 +419,13 @@ void TestItsFile()
     }
     cout << "> Success" << endl;
 
+    cout << "ItsFile::Copy(g_filename, g_shredFilename, true)" << endl;
+    if (!ItsFile::Copy(g_filename, g_shredFilename, true)) {
+        cout << "> FAILED: " << ItsError::GetLastErrorDescription() << endl;
+        cout << endl;
+        return;
+    }
+    cout << "> SUCCESS. File " << g_filename << " successfully copied to " << g_shredFilename << endl;
 
     cout << "ItsFile::Copy(g_filename, g_copyToFilename, true)" << endl;
     if (!ItsFile::Copy(g_filename, g_copyToFilename, true)) {
@@ -442,6 +450,14 @@ void TestItsFile()
         return;
     }
     cout << "> Success. File " << g_copyToFilename << " deleted" << endl;
+
+    cout << "ItsFile::Shred(g_shredFilename,true)" << endl;
+    if (!ItsFile::Shred(g_shredFilename, true)) {
+        cout << "> FAILED: " << ItsError::GetLastErrorDescription() << endl;
+        cout << endl;
+        return;
+    }
+    cout << "> Success. File " << g_shredFilename << " was shreded" << endl;
 
 	cout << endl;
 }
