@@ -1052,13 +1052,15 @@ namespace ItSoftware
 
                     const uint32_t bufferSize = 2048;
                     size_t bytesWritten = 0;
+                    size_t totalWritten = 0;
                     const unique_ptr<uint8_t[]> pdata = make_unique<uint8_t[]>(bufferSize);
                     for (uint32_t i = 0; i < bufferSize; i++){
                         pdata[i] = 0xFF;
                     }
                     f.SetPosFromBeg(0);
-                    while ( bytesWritten < fileSize ) {
-                        f.Write(static_cast<const void*>(pdata.get()), ((fileSize-bytesWritten) > bufferSize) ? bufferSize : (fileSize-bytesWritten), &bytesWritten);
+                    while ( totalWritten < fileSize ) {
+                        f.Write(static_cast<const void*>(pdata.get()), ((fileSize-totalWritten) > bufferSize) ? bufferSize : (fileSize-totalWritten), &bytesWritten);
+						totalWritten += bytesWritten;
                     }
                     f.Close();
 
