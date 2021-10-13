@@ -295,7 +295,7 @@ namespace ItSoftware
                         return string("");
                     }
 
-                    if (path.find(ItsPath::PathSeparator) == -1) {
+                    if (path.find(ItsPath::PathSeparator) == string::npos) {
                         return string("");
                     }
 
@@ -421,20 +421,20 @@ namespace ItSoftware
                 static string GetParentDirectory(string path) 
                 {
                     if (path.size() == 0) {
-                            return string("");
+                        return string("");
                     }
                     
                     size_t pos1 = path.rfind(ItsPath::PathSeparator);
                     if (pos1 == string::npos) {
-                            return string("");
+                        return string("");
                     }
 
                     size_t pos2 = pos1;
                     if (pos1 == (path.size() - 1)) {
-                            pos2 = path.rfind(ItsPath::PathSeparator, pos1 - 1);
-                            if (pos2 == string::npos) {
-                                    pos2 = pos1;
-                            }
+                        pos2 = path.rfind(ItsPath::PathSeparator, pos1 - 1);
+                        if (pos2 == string::npos) {
+                            pos2 = pos1;
+                        }
                     }
 
                     return path.substr(0, pos2+1);
