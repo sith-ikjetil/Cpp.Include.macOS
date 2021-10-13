@@ -1070,6 +1070,11 @@ namespace ItSoftware
 
                     return true;
                 }
+
+                static bool ShredAndDelete(string filename) 
+                {
+                    return ItsFile::Shred(filename,true);
+                }
             };
 
             //
