@@ -417,6 +417,28 @@ namespace ItSoftware
                     string retVal = path.replace(pe, path.size()-pe, newExtension);
                     return retVal;
                 }
+                
+                static string GetParentDirectory(string path) 
+                {
+                    if (path.size() == 0) {
+                            return string("");
+                    }
+                    
+                    size_t pos1 = path.rfind(ItsPath::PathSeparator);
+                    if (pos1 == string::npos) {
+                            return string("");
+                    }
+
+                    size_t pos2 = pos1;
+                    if (pos1 == (path.size() - 1)) {
+                            pos2 = path.rfind(ItsPath::PathSeparator, pos1 - 1);
+                            if (pos2 == string::npos) {
+                                    pos2 = pos1;
+                            }
+                    }
+
+                    return path.substr(0, pos2+1);
+                }
 
             };
 
@@ -446,6 +468,16 @@ namespace ItSoftware
             struct ItsDirectory
             {
             public:
+                static bool Exists(string path)
+                {
+                    DIR *dir;
+                    struct dirent *entry;
+                    if ((dir = opendir(path.c_str())) == nullptr) {
+                        return false;
+                    }
+                    closedir(dir);
+                    return true;
+                }
                 static bool CreateDirectory(string path, int mode)
                 {
                     return (mkdir(path.c_str(), mode) == 0);

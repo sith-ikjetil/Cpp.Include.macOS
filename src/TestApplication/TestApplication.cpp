@@ -620,6 +620,8 @@ void TestItsPath()
     cout << R"(> )" << ((ItsPath::IsPathValid(path)) ? "true" : "false") << endl;
     cout << R"(ItsPath::IsPathValid(g_invalidPath))" << endl; 
     cout << R"(> )" << ((ItsPath::IsPathValid(g_invalidPath)) ? "true" : "false") << endl;
+    cout << R"(ItsPath::GetParentDirectory(path))" << endl;
+    cout << R"(> )" << ItsPath::GetParentDirectory(path) << endl;
 
     cout << endl;
 }
@@ -632,6 +634,14 @@ void TestItsPath()
 void TestItsDirectory()
 {
     PrintTestHeader("ItsDirectory");
+
+    cout << R"(ItsDirectory::Exists(g_directoryRoot))" << endl;
+    if (!ItsDirectory::Exists(g_directoryRoot)) {
+        cout << "> FAILED: " << ItsError::GetLastErrorDescription() << endl;
+    }
+    else {
+        cout << "> Directory (g_directoryRoot) " << g_directoryRoot << " exists" << endl;
+    }
 
     cout << R"(ItsDirectory::GetDirectories(g_directoryRoot))" << endl;
     auto result = ItsDirectory::GetDirectories(g_directoryRoot);
