@@ -637,10 +637,10 @@ void TestItsDirectory()
 
     cout << R"(ItsDirectory::Exists(g_directoryRoot))" << endl;
     if (!ItsDirectory::Exists(g_directoryRoot)) {
-        cout << "> FAILED: " << ItsError::GetLastErrorDescription() << endl;
+        cout << "> Directory " << g_directoryRoot << " does NOT exist" << endl;
     }
     else {
-        cout << "> Directory (g_directoryRoot) " << g_directoryRoot << " exists" << endl;
+        cout << "> Directory " << g_directoryRoot << " EXISTS" << endl;
     }
 
     cout << R"(ItsDirectory::GetDirectories(g_directoryRoot))" << endl;
