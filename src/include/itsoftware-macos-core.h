@@ -1165,7 +1165,7 @@ namespace ItSoftware
                 CFStringRef m_refPathname;
                 CFArrayRef m_pathsToWatch;
                 CFAbsoluteTime m_latency = 0.0; // latency in seconds
-                unique_ptr<thread> m_pthread;
+                thread m_thread;
                 string m_pathname;
                 bool m_bPaused;
                 bool m_bStopped;
@@ -1280,7 +1280,7 @@ namespace ItSoftware
 
                         if ( this->m_stream != nullptr ) {
                             ItsFileMonitor::s_objects.push_back(this);
-                            this->m_pthread = make_unique<thread>(&ItsFileMonitor::ExecuteDispatchThread, this);
+                            this->m_thread = thread(&ItsFileMonitor::ExecuteDispatchThread, this);
                         }
                     }
                 }
@@ -1304,8 +1304,8 @@ namespace ItSoftware
                 {
                     this->Stop();
                     
-                    if ( this->m_pthread->joinable() ) {
-                        this->m_pthread->join();
+                    if ( this->m_thread.joinable() ) {
+                        this->m_thread.join();
                     }
 
                     auto itr = std::find(begin(ItsFileMonitor::s_objects), end(ItsFileMonitor::s_objects), this);
