@@ -1260,7 +1260,7 @@ namespace ItSoftware
                         m_bPaused(false),
                         m_bStopped(false)
                 {
-                    if (ItsFile::Exists(this->m_pathname) ) {
+                    if (ItsDirectory::Exists(this->m_pathname) ) {
                         /*
                             1. The application creates a stream by calling FSEventStreamCreate or FSEventStreamCreateRelativeToDevice.
                         */
