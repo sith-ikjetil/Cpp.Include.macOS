@@ -334,24 +334,24 @@ namespace ItSoftware
             //
             // struct: unique_file_descriptor
             //
-            struct unique_file_descriptor
+            struct unique_file_handle
             {
               private:
                 int m_fd = -1;
 
               protected:
               public:
-                unique_file_descriptor()
+                unique_file_handle()
                 {
                     this->m_fd = -1;
                 }
 
-                unique_file_descriptor(int fd)
+                unique_file_handle(int fd)
                 {
                     this->m_fd = fd;
                 }
 
-                ~unique_file_descriptor()
+                ~unique_file_handle()
                 {
                     this->Close();
                 }
@@ -405,7 +405,7 @@ namespace ItSoftware
             class ItsFile
             {
               private:
-                unique_file_descriptor m_fd;
+                unique_file_handle m_fd;
                 string m_filename;
               protected:
               public:
