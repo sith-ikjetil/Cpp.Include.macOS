@@ -1,4 +1,13 @@
 #!/bin/bash
-cd $HOME/Code/Cpp.Include.macOS/src/TestApplication
+echo "Building TestApplication"
+echo "> using release build <"
 clang++ -target x86_64-apple-macos11.3 TestApplication.cpp -std=gnu++1z \
 -framework CoreFoundation -framework CoreServices -o TestApplication
+if [[ $? -eq 0 ]]
+then
+    echo "> TestApplication build ok <"
+else
+    echo "> Test application build error"
+fi
+
+echo "> build process complete <"
