@@ -427,30 +427,31 @@ namespace ItSoftware::macOS
 		static string Replace(string s, string replace, string replace_with)
 		{
 			if (s.size() == 0 || replace.size() == 0 || replace.size() > s.size())
-			{
-				return string("");
-			}
+            {
+                return string("");
+            }
 
-			string retVal = s;
-			size_t index = retVal.find(replace);
-			if (index == string::npos)
-			{
-				return s;
-			}
-			while (index != string::npos)
-			{
-				stringstream ss;
-				ss << ItsString::Left(retVal, (int)index);
-				ss << replace_with;
-				ss << ItsString::Right(retVal, (int)(retVal.size() - index - replace.size()));
-				ss << ends;
+            string retVal = s;
+            size_t index = retVal.find(replace);
+            if (index == string::npos)
+            {
+                return retVal;
+            }
 
-				retVal = ss.str();
+            auto result = ItsString::Split(s, replace);
+            stringstream ss;
+            bool bHit = false;
+            for (auto& t : result) {
+                if (bHit) {
+                    ss << replace_with;
+                }
 
-				index = retVal.find(replace, index + replace.size());
-			}
+                ss << t;
 
-			return retVal;
+                bHit = true;
+            }
+
+            return ss.str();
 		}
 	};
 
