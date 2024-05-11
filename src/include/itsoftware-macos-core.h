@@ -1,7 +1,7 @@
 ///////////////////////////////////////////////////////////////////
 //: Title        : itsoftware-macos-core.h
 //: Product:     : Cpp.Include.macOS
-//: Date         : 2021-09-21
+//: Date         : 2021-09-21 
 //: Author       : "Kjetil Kristoffer Solberg" <post@ikjetil.no>
 //: Version      : 1.0.0.0
 //: Descriptions : Implementation of Cpp.Include.macOS.
