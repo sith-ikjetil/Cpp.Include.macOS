@@ -450,7 +450,7 @@ namespace ItSoftware::macOS
             auto result = ItsString::Split(s, replace);
             stringstream ss;
             bool bHit = false;
-            for (auto& t : result) {
+            for (const auto& t : result) {
                 if (bHit) {
                     ss << replace_with;
                 }
@@ -782,7 +782,7 @@ namespace ItSoftware::macOS
 		{
 			stringstream ss;
 			bool bAddSep = false;
-			for (auto &pk : pks)
+			for (const auto &pk : pks)
 			{
 				if (bAddSep)
 				{

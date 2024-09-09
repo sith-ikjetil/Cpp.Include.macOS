@@ -596,7 +596,7 @@ namespace ItSoftware::macOS::Core
 
             char data[2048];
             size_t bytesRead(0);
-            while (this->Read((void*)data, 2048, &bytesRead) && bytesRead > 0)
+            while (this->Read(reinterpret_cast<void*>(data), 2048, &bytesRead) && bytesRead > 0)
             {
                 ss.write(data, bytesRead);
             }
@@ -1194,7 +1194,7 @@ namespace ItSoftware::macOS::Core
 
         static void MyRunLoopCallback(CFRunLoopTimerRef timer, void *info)
         {
-            ItsFileMonitor* pthis = reinterpret_cast<ItsFileMonitor*>(info);
+            const ItsFileMonitor* pthis = reinterpret_cast<ItsFileMonitor*>(info);
             if ( pthis->m_bStopped ) {
                 CFRunLoopStop(CFRunLoopGetCurrent());
             }
@@ -1252,7 +1252,7 @@ namespace ItSoftware::macOS::Core
                 */
                 this->m_callback = &ItsFileMonitor::MonitorCallback;
                 this->m_refPathname = CFStringCreateWithCString(kCFAllocatorDefault, pathname.c_str(), kCFStringEncodingUTF8);
-                this->m_pathsToWatch = CFArrayCreate(nullptr, (const void**)&this->m_refPathname,1,nullptr);
+                this->m_pathsToWatch = CFArrayCreate(nullptr, reinterpret_cast<void**>(&this->m_refPathname),1,nullptr);
                 
                 // 1.
                 this->m_stream = FSEventStreamCreate(

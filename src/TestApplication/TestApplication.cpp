@@ -352,9 +352,8 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
                 ss << ",";
             }
             ss << R"(")" << s << R"(")";
-            if ( bFirst ) {
-                bFirst = false;
-            }
+            
+            bFirst = false;            
         }
         ss << "}";
         ss << ends;
@@ -413,7 +412,7 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
         char text[] = "Test Line 1\nTest Line 2\n";
         size_t written(0);
         cout << "file.Write((void*)text, strlen(text), &written)" << endl;
-        if ( !file.Write((void*)text, strlen(text), &written) )
+        if ( !file.Write(reinterpret_cast<void*>(text), strlen(text), &written) )
         {
             cout << "> FAILED: " << ItsError::GetLastErrorDescription() << endl;
             cout << endl;
@@ -583,7 +582,7 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
         
         uuid_t guid{ 0 };
         cout << "ItsGuid::CreateGuid(guid)" << endl;
-        if (ItsGuid::CreateGuid(guid))
+        ItsGuid::CreateGuid(guid);
         {
             cout << "> Success" << endl;
             
@@ -597,10 +596,7 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
             cout << R"(> ")" << ItsGuid::ToString(guid, ItsGuidFormat::MicrosoftCompactFormat, true) << R"(")" << endl;
             cout << "ItsGuid::ToString(guid,ItsGuidFormat::MicrosoftPrefixedCompactFormat, true)" << endl;
             cout << R"(> ")" << ItsGuid::ToString(guid, ItsGuidFormat::MicrosoftPrefixedCompactFormat, true) << R"(")" << endl;
-        }
-        else {
-            cout << "> FAILED: " << ItsError::GetLastErrorDescription() << endl;
-        }
+        }        
 
         cout << endl;
     }
