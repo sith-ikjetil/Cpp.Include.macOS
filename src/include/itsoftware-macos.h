@@ -248,7 +248,7 @@ namespace ItSoftware::macOS
 			{
 				return string("");
 			}
-			if (width <= 0)
+			if (width == 0)
 			{
 				return string("");
 			}
@@ -361,7 +361,7 @@ namespace ItSoftware::macOS
 		// left count chars
 		static string Left(string s, uint32_t count)
 		{
-			if (s.size() == 0 || count <= 0)
+			if (s.size() == 0 || count == 0)
 			{
 				return string("");
 			}
@@ -384,7 +384,7 @@ namespace ItSoftware::macOS
 		// mid index, count chars
 		static string Mid(string s, uint32_t index, uint32_t count)
 		{
-			if (s.size() == 0 || count <= 0 || index < 0 || index >= s.size())
+			if (s.size() == 0 || count == 0 || index >= s.size())
 			{
 				return string("");
 			}
@@ -413,7 +413,7 @@ namespace ItSoftware::macOS
 		// right count chars
 		static string Right(string s, uint32_t count)
 		{
-			if (s.size() == 0 || count <= 0)
+			if (s.size() == 0 || count == 0)
 			{
 				return string("");
 			}
@@ -691,7 +691,7 @@ namespace ItSoftware::macOS
 			return retVal;
 		}
 
-		static string ToString(tm &dateTime)
+		static string ToString(const tm &dateTime)
 		{
 			stringstream ss;
 			ss << std::setfill('0') << std::setw(4) << (dateTime.tm_year + 1900);
@@ -778,7 +778,7 @@ namespace ItSoftware::macOS
 			return false;
 		}
 
-		static string ToString(vector<uint64_t> &pks)
+		static string ToString(const vector<uint64_t> &pks)
 		{
 			stringstream ss;
 			bool bAddSep = false;
@@ -825,17 +825,17 @@ namespace ItSoftware::macOS
 		tm m_tm;
 
 	public:
-		ItsDateTime(tm timeDate)
+		explicit ItsDateTime(const tm timeDate)
 		{
 			this->m_tm = timeDate;
 		}
 
-		ItsDateTime(ItsDateTime &dateTime)
+		explicit ItsDateTime(const ItsDateTime &dateTime)
 		{
 			this->m_tm = dateTime.m_tm;
 		}
 
-		ItsDateTime(ItsDateTime &&dateTime) noexcept
+		explicit ItsDateTime(ItsDateTime &&dateTime) noexcept
 		{
 			this->m_tm = dateTime.m_tm;
 		}
@@ -1457,7 +1457,7 @@ namespace ItSoftware::macOS
 	public:
 		static string CreateID(size_t count, ItsCreateIDOptions options, bool includeNumbers)
 		{
-			if (count <= 0)
+			if (count == 0)
 			{
 				count = 16;
 			}

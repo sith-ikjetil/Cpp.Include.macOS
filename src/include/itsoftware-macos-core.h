@@ -331,12 +331,12 @@ namespace ItSoftware::macOS::Core
 
         protected:
         public:
-        unique_file_handle()
+        explicit unique_file_handle()
         {
             this->m_fd = -1;
         }
 
-        unique_file_handle(int fd)
+        explicit unique_file_handle(int fd)
         {
             this->m_fd = fd;
         }
@@ -732,7 +732,7 @@ namespace ItSoftware::macOS::Core
             }
 
             ItsFile source;
-            source.OpenExisting(sourceFilename.c_str(), "r");
+            source.OpenExisting(sourceFilename, "r");
             if (source.IsInvalid())
             {
                 return false;
@@ -752,7 +752,7 @@ namespace ItSoftware::macOS::Core
             {
                 int mode = 0;
                 ItsFile::GetMode(sourceFilename, &mode);
-                target.OpenOrCreate(targetFilename.c_str(), "wt", mode);
+                target.OpenOrCreate(targetFilename, "wt", mode);
             }
 
             if (target.IsInvalid())
@@ -863,7 +863,7 @@ namespace ItSoftware::macOS::Core
             }
 
             ItsFile f;
-            f.OpenExisting(filename.c_str(), "rw");
+            f.OpenExisting(filename, "rw");
             if (f.IsInvalid())
             {
                 return false;
@@ -1023,21 +1023,17 @@ namespace ItSoftware::macOS::Core
                 return false;
             }
 
-            for (auto d : directory) {
-                for (auto i : invalidPathChars) {
-                    if (d == i) {
-                        return false;
-                    }
-                }
-            }
+            return std::all_of(directory.begin(), directory.end(), [&](wchar_t d) {
+                return std::none_of(invalidPathChars.begin(), invalidPathChars.end(), [&](wchar_t i) {
+                    return d == i;
+                    });
+                });
 
-            for (auto f : filename) {
-                for (auto i : invalidFileChars) {
-                    if (f == i) {
-                        return false;
-                    }
-                }
-            }
+            return std::all_of(filename.begin(), filename.end(), [&](wchar_t d) {
+                return std::none_of(invalidFileChars.begin(), invalidFileChars.end(), [&](wchar_t i) {
+                    return d == i;
+                    });
+                });
 
             return true;
         }
