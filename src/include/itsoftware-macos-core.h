@@ -1003,6 +1003,10 @@ namespace ItSoftware::macOS::Core
 
             string directory = ItsPath::GetDirectory(path);
             string filename = ItsPath::GetFilename(path);
+
+            if (directory.size() == 0 && filename.size() == 0) {
+                return false;
+            }
             
             auto invalidPathChars = ItsPath::GetInvalidPathCharacters();
             auto invalidFileChars = ItsPath::GetInvalidFilenameCharacters();
