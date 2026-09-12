@@ -375,17 +375,27 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
     //
     void TestItsLog()
     {
-        PrintTestHeader("ItsLog");
+        PrintHeader("ItsLog");
 
-        ItsLog log("ItsTestApp",true);
-        log.LogInformation("This is an information log item");
-        log.LogWarning("This is an warning log item");
-        log.LogError("This is an error log item");
-        log.LogOther("This is an other log item");
-        log.LogDebug("This is an debug log item");
+        string fileName = "/tmp/test-application.log";
 
-        PrintTestSubHeader("ToString");
-        cout << log.ToString() << endl;
+        ItsLog log{fileName};
+        log.LogInformation(ItsLogStatus::OK, "This is an information log item", "Some description here.");
+        log.LogWarning(ItsLogStatus::OK, "This is an warning log item", "Some description here.");
+        log.LogError(ItsLogStatus::FAILED, "This is an error log item", "Some description here.");
+        log.LogOther(ItsLogStatus::OK, "This is an other log item", "Some description here.");
+        log.LogDebug(ItsLogStatus::OK, "This is an debug log item", "Some description here.");
+
+        PrintSubHeader("ItsLog");
+        string logText;
+        ItsFile logFile;
+        logFile.OpenExisting(fileName, "r");
+        if ( logFile.ReadAllText(logText) ) {
+            cout << logText << endl;
+        }
+        else {
+            cout << "ERROR" << endl;
+        }
         
         cout << endl;
     }
