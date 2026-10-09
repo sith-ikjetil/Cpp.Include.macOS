@@ -1,32 +1,44 @@
 ///////////////////////////////////////////////////////////////////
-//: Title        : itsoftware-macos-core.h
-//: Product:     : Cpp.Include.macOS
-//: Date         : 2021-09-21 
+//: Title        : itsoftware-linux-core.h
+//: Product:     : Cpp.Include.Linux
+//: Date         : 2020-05-01
 //: Author       : "Kjetil Kristoffer Solberg" <post@ikjetil.no>
 //: Version      : 1.0.0.0
-//: Descriptions : Implementation of Cpp.Include.macOS.
+//: Descriptions : Implementation of Cpp.Include.Linux.
 //: Uses         : libuuid.a.
 #pragma once
 //
 // #include
 //
 #include <string>
+#include <cstring>
 #include <memory>
+#include <algorithm>
+#include <thread>
+#include <functional>
+#include <iostream>
+#include <vector>
+#include <chrono>
+
 #include <fcntl.h>
+#include <dlfcn.h>
 #include <unistd.h>
 #include <sys/time.h>
 #include <sys/times.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <dirent.h>
-#include <iostream>
-#include <vector>
 #include <uuid/uuid.h>
+#include <sys/event.h>
 #include <signal.h>
-#include <thread>
-#include <chrono>
-#include <functional>
 #include <CoreServices/CoreServices.h>
+#include <dispatch/dispatch.h>
+#include <sys/stat.h>
+#include <atomic>
+#include <cerrno>
+#include <cstdint>
+#include <functional>
+#include <utility>
 #include "itsoftware-macos.h"
 
 //
@@ -43,13 +55,99 @@ namespace ItSoftware::macOS::Core
     using std::vector;
     using std::thread;
     using std::function;
+    using std::begin;
+    using std::end;
+    using std::any_of;
     using ItSoftware::macOS::ItsString;
-
+    
     //
     // #define
     //
     #define FILE_MONITOR_BUFFER_LENGTH (10 * (sizeof(inotify_event) + NAME_MAX + 1))
 
+    //
+    // class: ItsTimeTracker
+    //
+    // (i): Simple time tracking class that prints elapsed time on destruction.
+    //
+    class ItsTimeTracker {
+    private:	
+        std::chrono::time_point<std::chrono::steady_clock> start, end;
+        std::string  name;
+        std::wstring wname;
+        bool wide{ false };
+        bool callback{ false };
+        std::function<void(const std::string& name, std::chrono::steady_clock::duration)> fnComplete = nullptr;
+        std::function<void(const std::wstring& name, std::chrono::steady_clock::duration)> wfnComplete = nullptr;
+    public:
+        explicit ItsTimeTracker(const std::string& fName)
+            : name(fName),
+            wide(false),
+            start(std::chrono::steady_clock::now())
+        {
+        }
+
+        explicit ItsTimeTracker(const std::wstring& fName)
+            : wname(fName),
+            wide(true),
+            start(std::chrono::steady_clock::now())
+        {
+        }
+
+        ItsTimeTracker(const std::string& fName, std::function<void(std::string name, std::chrono::steady_clock::duration)> ff)
+            : name(fName),
+            fnComplete(ff),
+            wide(false),
+            start(std::chrono::steady_clock::now()),
+            callback(true)
+        {
+        }
+
+        ItsTimeTracker(const std::wstring& fName, std::function<void(std::wstring name, std::chrono::steady_clock::duration)> ff)
+            : wname(fName),
+            wfnComplete(ff),
+            wide(true),
+            start(std::chrono::steady_clock::now()),
+            callback(true)
+        {
+        }
+
+        ~ItsTimeTracker() noexcept
+        {
+            end = std::chrono::steady_clock::now();
+
+            if (callback) {
+                if (wide) {
+                    wfnComplete(this->wname, (end - start));
+                }
+                else {
+                    fnComplete(this->name, (end - start));
+                }
+            }
+            else {
+                auto duration1 = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+                auto duration2 = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+                auto duration3 = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+
+                //std::println("{}: {} ms | {} us | {} ns", name, duration1, duration2, duration3);
+                if (wide)
+                {
+                    std::wcout << L"(" << wname << L": " << duration1 << L" ms | " << duration2 << L" us | " << duration3 << L" ns)" << L'\n';
+                }
+                else
+                {
+                    std::cout << "(" << name << ": " << duration1 << " ms | " << duration2 << " us | " << duration3 << " ns)" << '\n';
+                }
+            }
+        }
+
+        // No copying or moving
+        ItsTimeTracker(const ItsTimeTracker&) = delete;
+        ItsTimeTracker& operator=(const ItsTimeTracker&) = delete;
+        ItsTimeTracker(ItsTimeTracker&&) = delete;
+        ItsTimeTracker& operator=(ItsTimeTracker&&) = delete;
+    };
+    
     //
     // struct: ItsTimer
     //
@@ -161,7 +259,7 @@ namespace ItSoftware::macOS::Core
         }
     };
 
-        //
+    //
     // struct: ItsGuidFormat
     //
     // (i): Container for premade Guid format strings.
@@ -196,17 +294,17 @@ namespace ItSoftware::macOS::Core
         static string ToString(uuid_t guid) {
             return ItsGuid::ToString(guid, ItsGuidFormat::MicrosoftRegistryFormat, true);
         }
-        static string ToString(uuid_t guid, string format, bool isMicrosoftGuidFormat) {
+        static string ToString(uuid_t guid, const string& format, bool isMicrosoftGuidFormat) {
             char szBuffer[100];
             memset(szBuffer, 0, 100);
 
             if (isMicrosoftGuidFormat) {
-                sprintf(szBuffer, format.c_str(),
+                snprintf(szBuffer, 100, format.c_str(),
                     *reinterpret_cast<uint32_t*>(&guid[0]), *reinterpret_cast<uint16_t*>(&guid[4]), *reinterpret_cast<uint16_t*>(&guid[6]),
                     guid[8], guid[9], guid[10], guid[11], guid[12], guid[13], guid[14], guid[15]);
             }
             else {
-                sprintf(szBuffer, format.c_str(),
+                snprintf(szBuffer, 100, format.c_str(),
                     guid[0], guid[1], guid[2], guid[3], guid[4], guid[5], guid[6], guid[7],
                     guid[8], guid[9], guid[10], guid[11], guid[12], guid[13], guid[14], guid[15]);
             }
@@ -217,12 +315,12 @@ namespace ItSoftware::macOS::Core
     //
     // struct: ItsError
     //
-    // (i): macOS error messages
+    // (i): Linux error messages
     //
     struct ItsError
     {
     public:
-        static string GetErrorDescription(int err)
+        static string GetErrorDescription(int err) 
         {
             return strerror(err);
         }
@@ -231,38 +329,47 @@ namespace ItSoftware::macOS::Core
             return strerror(errno);
         }
     };
-
+    
     //
     // struct: ItsDirectory
-    //
-    // (i): macOS directory routines.
+    // 
+    // (i): Linux directory routines.
     //
     struct ItsDirectory
     {
     public:
-        static bool Exists(string dirname)
+        static bool Exists(const string& dirname)
         {
             struct stat sb;
 
-            if (stat(dirname.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode)) {
+            if (stat(dirname.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode))
+            {
                 return true;
             }
-
             return false;
         }
-        static bool CreateDirectory(string path, int mode)
+
+        static string GetCurrentDirectory() 
+        {
+            char path[PATH_MAX];
+            if ( getcwd(path, PATH_MAX) == nullptr ) {
+                return string("");
+            }
+            return string(path);
+        }
+        static bool CreateDirectory(const string& path, int mode)
         {
             return (mkdir(path.c_str(), mode) == 0);
         }
-        static bool RemoveDirectory(string path)
+        static bool RemoveDirectory(const string& path)
         {
             return (rmdir(path.c_str()) == 0);
         }
-        static bool SetCurrentDirectory(string path)
+        static bool SetCurrentDirectory(const string& path)
         {
             return (chdir(path.c_str()) == 0);
         }
-        static vector<string> GetDirectories(string path) {
+        static vector<string> GetDirectories(const string& path) {
             if (path.size() == 0) {
                 return vector<string>();
             }
@@ -285,7 +392,7 @@ namespace ItSoftware::macOS::Core
             
             return directories;
         }
-        static vector<string> GetFiles(string path) {
+        static vector<string> GetFiles(const string& path) {
             if (path.size() == 0) {
                 return vector<string>();
             }
@@ -311,72 +418,147 @@ namespace ItSoftware::macOS::Core
     };
 
     //
-    // struct: unique_file_descriptor
+    // class: unique_handle
     //
-    struct unique_file_handle
+    // (i): Wrapper for many types of Windows handles.
+    //
+    template<typename Traits>
+    class unique_handle
     {
-        private:
-        int m_fd = -1;
+    private:
+        typedef typename Traits::pointer pointer;
 
-        protected:
-        public:
-        explicit unique_file_handle()
+        pointer m_value;
+
+    protected:
+    public:
+
+        explicit unique_handle(pointer value = Traits::invalid()) noexcept
+            : m_value{ value }
         {
-            this->m_fd = -1;
+
         }
 
-        explicit unique_file_handle(int fd)
-        {
-            this->m_fd = fd;
-        }
-
-        ~unique_file_handle()
+        ~unique_handle() noexcept
         {
             this->Close();
         }
 
-        bool IsValid() const
+        auto Close() noexcept -> void
         {
-            return (this->m_fd >= 0);
-        }
-
-        bool IsInvalid() const
-        {
-            return (this->m_fd < 0);
-        }
-
-        void operator=(int fd)
-        {
-            this->Close();
-            this->m_fd = fd;
-        }
-
-        operator int()
-        {
-            return this->m_fd;
-        }
-
-        bool Close()
-        {
-            if (this->IsInvalid())
+            if (*this)
             {
-                return false;
+                Traits::close(this->m_value);
+                this->m_value = Traits::invalid();
             }
-            close(this->m_fd);
-            this->m_fd = -1;
-            return true;
         }
 
-        int p() const
+        pointer p()
         {
-            return this->m_fd;
+            return m_value;
         }
 
-        const int *GetAddressOf() const
+        pointer* GetAddressOf()
         {
-            return &this->m_fd;
+            return &m_value;
+        }
+
+        //
+        // bool
+        //
+        explicit operator bool() const noexcept
+        {
+            return m_value != Traits::invalid();
+        }
+
+        //
+        // unique_so_handle
+        //
+        operator void*() const noexcept
+        {
+            return static_cast<void*>(m_value);
+        }
+
+        void operator=(void* handle)
+        {
+            if (this->m_value != Traits::invalid()) {
+                this->Close();
+            }
+            m_value = static_cast<typename Traits::pointer>(handle);
+        }
+
+        // 
+        // unique_file_handle
+        //
+        operator int() const noexcept
+        {
+            return static_cast<int>(m_value);
+        }
+
+        void operator=(int handle)
+        {
+            if (this->m_value != Traits::invalid()) {
+                this->Close();
+            }
+            m_value = static_cast<typename Traits::pointer>(handle);
+        }
+
+        //
+        // IsInvalid
+        //
+        bool IsInvalid()
+        {
+            return (m_value == Traits::invalid());
+        }
+
+        //
+        // IsValid
+        //
+        bool IsValid()
+        {
+            return (m_value != Traits::invalid());
         }
     };
+
+    //
+    // shared library descriptor traits
+    //
+    struct handle_shared_library_traits
+    {
+        typedef void* pointer;
+        static auto invalid() noexcept -> pointer
+        {
+            return nullptr;
+        }
+
+        static auto close(pointer value) noexcept -> void
+        {
+            ::dlclose(value);
+        }
+    };
+
+    //
+    // shared library descriptor traits
+    //
+    struct handle_file_traits
+    {
+        typedef int pointer;
+        static auto invalid() noexcept -> pointer
+        {
+            return -1;
+        }
+
+        static auto close(pointer value) noexcept -> void
+        {
+            ::close(value);
+        }
+    };
+
+    //
+    // typedef unique_handle's.
+    //
+    typedef unique_handle<handle_shared_library_traits> unique_so_handle;
+    typedef unique_handle<handle_file_traits> unique_file_handle;
 
     //
     // File IO Wrapper
@@ -397,13 +579,13 @@ namespace ItSoftware::macOS::Core
         //
         string GetFilename()
         {
-                return this->m_filename;
+            return this->m_filename;
         }
 
         //
         // Method: OpenExisting
         //
-        bool OpenExisting(string filename, string flags)
+        bool OpenExisting(const string& filename, const string& flags)
         {
             if (this->m_fd.IsValid())
             {
@@ -445,7 +627,6 @@ namespace ItSoftware::macOS::Core
             }
 
             i_flags |= O_CREAT;
-            //i_flags |= O_LARGEFILE;
 
             if (flags.find("t") != string::npos)
             {
@@ -471,7 +652,7 @@ namespace ItSoftware::macOS::Core
         //
         // (i) mode = "rwta" (read, write, trunc, append)
         //
-        bool OpenOrCreate(string filename, string flags, int mode)
+        bool OpenOrCreate(const string& filename, const string& flags, int mode)
         {
             if (this->m_fd.IsValid())
             {
@@ -522,11 +703,6 @@ namespace ItSoftware::macOS::Core
             this->m_fd = open(filename.c_str(), i_flags, mode);
             if (this->m_fd.IsInvalid())
             {
-                return false;
-            }
-            if (fchmod(this->m_fd, mode) != 0 )
-            {
-                this->Close();
                 return false;
             }
 
@@ -607,7 +783,7 @@ namespace ItSoftware::macOS::Core
             this->SetPosFromBeg(0);
 
             string str;
-            if (!this->ReadAllText(str))
+            if (!this->ReadAllText(str)) 
             {
                 return false;
             }
@@ -624,7 +800,7 @@ namespace ItSoftware::macOS::Core
                 return false;
             }
 
-            if (lseek(this->m_fd, offset, SEEK_SET) == -1)
+            if (lseek(this->m_fd, offset, SEEK_SET) == -1) 
             {
                 return false;
             }
@@ -639,7 +815,7 @@ namespace ItSoftware::macOS::Core
                 return false;
             }
 
-            if (lseek(this->m_fd, offset, SEEK_END) == -1)
+            if (lseek(this->m_fd, offset, SEEK_END) == -1) 
             {
                 return false;
             }
@@ -654,7 +830,7 @@ namespace ItSoftware::macOS::Core
                 return false;
             }
 
-            if (lseek(this->m_fd, offset, SEEK_CUR) == -1)
+            if (lseek(this->m_fd, offset, SEEK_CUR) == -1) 
             {
                 return false;
             }
@@ -662,9 +838,9 @@ namespace ItSoftware::macOS::Core
             return true;
         }
 
-        bool Close()
+        void Close()
         {
-            return this->m_fd.Close();
+            this->m_fd.Close();
         }
 
         bool IsValid()
@@ -685,7 +861,7 @@ namespace ItSoftware::macOS::Core
         //
         // GetFileSize
         //
-        static size_t GetFileSize(string filename)
+        static size_t GetFileSize(const string& filename)
         {
             struct stat statbuf;
             if ( stat(filename.c_str(), &statbuf) == -1 ) {
@@ -694,26 +870,29 @@ namespace ItSoftware::macOS::Core
             return statbuf.st_size;
         }
 
-        static bool Delete(string filename)
+        static bool Delete(const string& filename)
         {
             return (!unlink(filename.c_str()));
         }
 
-        static bool Exists(string filename)
+        static bool Exists(const string& filename)
         {
             struct stat sb;
-            if(stat(filename.c_str(), &sb) == 0 && S_ISREG(sb.st_mode)) {
+
+            if (stat(filename.c_str(), &sb) == 0 && S_ISREG(sb.st_mode))
+            {
                 return true;
             }
+            
             return false;
         }
 
-        static bool Move(string sourceFilename, string targetFilename)
+        static bool Move(const string& sourceFilename, const string& targetFilename)
         {
             return (!rename(sourceFilename.c_str(), targetFilename.c_str()));
         }
 
-        static bool Copy(string sourceFilename, string targetFilename, bool replaceIfExists)
+        static bool Copy(const string& sourceFilename, const string& targetFilename, bool replaceIfExists)
         {
             if (!ItsFile::Exists(sourceFilename))
             {
@@ -761,7 +940,7 @@ namespace ItSoftware::macOS::Core
             return true;
         }
 
-        static bool GetMode(string filename, int *mode)
+        static bool GetMode(const string& filename, int *mode)
         {
             if (!ItsFile::Exists(filename))
             {
@@ -777,7 +956,7 @@ namespace ItSoftware::macOS::Core
             return true;
         }
 
-        static bool SetMode(string filename, int mode)
+        static bool SetMode(const string& filename, int mode)
         {
             if (!ItsFile::Exists(filename))
             {
@@ -792,8 +971,7 @@ namespace ItSoftware::macOS::Core
             return true;
         }
 
-
-        static int CreateMode(string user, string group, string other)
+        static int CreateMode(const string& user, const string& group, const string& other)
         {
             int mode(0);
 
@@ -839,21 +1017,22 @@ namespace ItSoftware::macOS::Core
             return mode;
         }
 
-        static bool Shred(string filename, bool alsoDelete) 
-        {    
-            if (!ItsFile::Exists(filename))
+        static bool Shred(const string& filename, bool alsoDelete)
+        {
+            if (!ItsFile::Exists(filename)) 
             {
                 return false;
             }
 
             const size_t fileSize = ItsFile::GetFileSize(filename);
-            if (fileSize == 0 ) {
+            if ( fileSize == 0 ) 
+            {
                 return false;
             }
 
             ItsFile f;
             f.OpenExisting(filename, "rw");
-            if (f.IsInvalid())
+            if ( f.IsInvalid() ) 
             {
                 return false;
             }
@@ -862,32 +1041,80 @@ namespace ItSoftware::macOS::Core
             size_t bytesWritten = 0;
             size_t totalWritten = 0;
             const unique_ptr<uint8_t[]> pdata = make_unique<uint8_t[]>(bufferSize);
-            for (uint32_t i = 0; i < bufferSize; i++){
+            for (uint32_t i = 0; i < bufferSize; i++) {
                 pdata[i] = 0xFF;
             }
             f.SetPosFromBeg(0);
-            while ( totalWritten < fileSize ) {
-                f.Write(static_cast<const void*>(pdata.get()), ((fileSize-totalWritten) > bufferSize) ? bufferSize : (fileSize-totalWritten), &bytesWritten);
+            while (totalWritten < fileSize) {
+                f.Write(static_cast<const void*>(pdata.get()), ((fileSize - totalWritten) > bufferSize) ? bufferSize : (fileSize-totalWritten), &bytesWritten);
                 totalWritten += bytesWritten;
             }
             f.Close();
 
-            if (alsoDelete) {
+            if (alsoDelete) 
+            {
                 return ItsFile::Delete(filename);
             }
 
             return true;
         }
 
-        static bool ShredAndDelete(string filename) 
+        static bool ShredAndDelete(const string& filename) 
         {
             return ItsFile::Shred(filename,true);
+        }
+
+        static bool ReadAllText(const string& filename, string& textRead) 
+        {
+            if (!ItsFile::Exists(filename)) {
+                return false;
+            }
+
+            ItsFile file{};
+            string flags("rw");
+            if (!file.OpenExisting(filename, flags)) {
+                return false;
+            }
+
+            file.SetPosFromBeg(0);
+            if (!file.ReadAllText(textRead)) {
+                return false;
+            }
+
+            file.Close();
+            return true;
+        }
+
+        static bool ReadTextAllLines(const string& filename, vector<string>& textLines) 
+        {
+            if (!ItsFile::Exists(filename)) {
+                return false;
+            }
+
+            ItsFile file{};
+            string flags("rw");
+            if (!file.OpenExisting(filename, flags)) {
+                return false;
+            }
+
+            file.SetPosFromBeg(0);
+            string textRead;
+            if (!file.ReadAllText(textRead)) {
+                return false;
+            }
+
+            file.Close();
+
+            textLines.clear();
+            textLines = ItsString::Split(textRead, "\n");
+            
+            return true;
         }
     };
 
     //
     // struct: ItsPath
-    //
+    // 
     // (i): Path routines.
     //
     struct ItsPath
@@ -907,7 +1134,7 @@ namespace ItSoftware::macOS::Core
             chars.push_back('/');
             return chars;
         }
-        static string Combine(string path1, string path2)
+        static string Combine(const string& path1, const string& path2)
         {
             if (path1.size() == 0 && path2.size() == 0) {
                 return string("");
@@ -932,22 +1159,22 @@ namespace ItSoftware::macOS::Core
             string retVal = path.str();
             return retVal;
         }
-        static bool Exists(string path)
+        static bool Exists(const string& path)
         {
             if (access(path.c_str(), F_OK) == 0) {
                 return true;
             }
             return false;
         }
-        static bool IsFile(string path)
+        static bool IsFile(const string& path)
         {
             return ItsFile::Exists(path);
         }
-        static bool IsDirectory(string path)
+        static bool IsDirectory(const string& path)
         {
             return ItsDirectory::Exists(path);
         }
-        static string GetDirectory(string path)
+        static string GetDirectory(const string& path) 
         {
             if (path.size() == 0) {
                 return string("");
@@ -963,7 +1190,7 @@ namespace ItSoftware::macOS::Core
             }
             return path.substr(0, i+1);
         }
-        static string GetFilename(string path)
+        static string GetFilename(const string& path) 
         {
             if (path.size() == 0) {
                 return string("");
@@ -979,7 +1206,7 @@ namespace ItSoftware::macOS::Core
             }
             return path.substr(i+1, path.size()-i-1);
         }
-        static string GetExtension(string path)
+        static string GetExtension(const string& path)
         {
             if (path.size() == 0) {
                 return string("");
@@ -995,7 +1222,7 @@ namespace ItSoftware::macOS::Core
             }
             return path.substr(i, path.size() - i);
         }
-        static bool IsPathValid(string path)
+        static bool IsPathValid(const string& path)
         {
             if (path.size() == 0) {
                 return false;
@@ -1007,11 +1234,10 @@ namespace ItSoftware::macOS::Core
             if (directory.size() == 0 && filename.size() == 0) {
                 return false;
             }
-            
+
             auto invalidPathChars = ItsPath::GetInvalidPathCharacters();
             auto invalidFileChars = ItsPath::GetInvalidFilenameCharacters();
-            
-            
+                                
             if ( directory[directory.size()-1] != ItsPath::PathSeparator ) {
                 return false;
             }
@@ -1030,7 +1256,7 @@ namespace ItSoftware::macOS::Core
 
             return true;
         }
-        static bool HasExtension(string path, string extension)
+        static bool HasExtension(const string& path, const string& extension)
         {
             if (path.size() == 0) {
                 return false;
@@ -1043,7 +1269,7 @@ namespace ItSoftware::macOS::Core
 
             return (strcmp(ext.c_str(), extension.c_str()) == 0);
         }
-        static string ChangeExtension(string path, string newExtension)
+        static string ChangeExtension(const string& path, const string& newExtension) 
         {
             if (path.size() == 0) {
                 return string("");
@@ -1072,225 +1298,517 @@ namespace ItSoftware::macOS::Core
                 return path;
             }
 
-            string retVal = path.replace(pe, path.size()-pe, newExtension);
+            string path_str = path;
+            string retVal = path_str.replace(pe, path.size()-pe, newExtension);
             return retVal;
         }
-        
-        static string GetParentDirectory(string path) 
+
+        static string GetParentDirectory(const string& path) 
         {
             if (path.size() == 0) {
                 return string("");
             }
 
-            path = ItsPath::GetDirectory(path);
+            auto path_str = ItsPath::GetDirectory(path);
             
-            size_t pos1 = path.rfind(ItsPath::PathSeparator);
+            size_t pos1 = path_str.rfind(ItsPath::PathSeparator);
             if (pos1 == string::npos) {
                 return string("");
             }
 
             size_t pos2 = pos1;
-            if (pos1 == (path.size() - 1)) {
-                pos2 = path.rfind(ItsPath::PathSeparator, pos1 - 1);
+            if (pos1 == (path_str.size() - 1)) {
+                pos2 = path_str.rfind(ItsPath::PathSeparator, pos1 - 1);
                 if (pos2 == string::npos) {
                     pos2 = pos1;
                 }
             }
 
-            return path.substr(0, pos2+1);
+            return path_str.substr(0, pos2+1);
         }
-    };
 
-    //
-    // struct: ItsFileMonitorEvent
-    //
-    // (i): file monitor event object
-    //
-    struct ItsFileMonitorEvent {
-        FSEventStreamEventId eventId;
-        FSEventStreamEventFlags eventFlag;
-        string path;
     };
 
     //
     // enum: ItsFileMonitorMask
     //
-    // (i): mask to set what events you want
+    // (i): macOS FSEvents masks
     //
-    enum ItsFileMonitorMask : uint32_t {
-        None = kFSEventStreamCreateFlagNone,
-        UseCFTypes = kFSEventStreamCreateFlagUseCFTypes,
-        NoDefer = kFSEventStreamCreateFlagNoDefer,
-        WatchRoot = kFSEventStreamCreateFlagWatchRoot,
-        IgnoreSelf = kFSEventStreamCreateFlagIgnoreSelf,
-        FileEvents = kFSEventStreamCreateFlagFileEvents,
-        MarkSelf = kFSEventStreamCreateFlagMarkSelf,
-        UseExtendedData = kFSEventStreamCreateFlagUseExtendedData,
-        FullHistory = kFSEventStreamCreateFlagFullHistory,
+    enum ItsFileMonitorMask : uint32_t
+    {
+        Create = kFSEventStreamEventFlagItemCreated,
+        Delete = kFSEventStreamEventFlagItemRemoved,
+        Modify = kFSEventStreamEventFlagItemModified,
+        Rename = kFSEventStreamEventFlagItemRenamed,
+
+        Attrib = kFSEventStreamEventFlagItemInodeMetaMod,
+        ChangeOwner = kFSEventStreamEventFlagItemChangeOwner,
+        Xattr = kFSEventStreamEventFlagItemXattrMod,
+
+        IsFile = kFSEventStreamEventFlagItemIsFile,
+        IsDirectory = kFSEventStreamEventFlagItemIsDir,
+        IsSymlink = kFSEventStreamEventFlagItemIsSymlink,
+
+        All = Create | Delete | Modify | Rename |
+            Attrib | ChangeOwner | Xattr
     };
 
     //
     // class: ItsFileMonitor
     //
-    // (i): Monitors a given file folder
+    // (i): Monitors a directory using macOS FSEvents
     //
     class ItsFileMonitor
     {
     private:
-        function<void(ItsFileMonitorEvent&)> m_func;
-        FSEventStreamRef m_stream;
-        FSEventStreamCallback m_callback;
-        FSEventStreamContext* m_callbackContext = nullptr; // put stream specific data here
-        CFStringRef m_refPathname;
-        CFArrayRef m_pathsToWatch;
-        CFAbsoluteTime m_latency = 0.0; // latency in seconds
-        thread m_thread;
-        string m_pathname;
-        bool m_bPaused;
-        bool m_bStopped;
-        uint32_t m_mask;
-        inline static vector<ItsFileMonitor*> s_objects{};
-    protected:
-        void ExecuteDispatchThread() {
-            /*
-                1. done.
-                2. The application schedules the stream on the run loop by calling FSEventStreamScheduleWithRunLoop.
-            */
-            FSEventStreamScheduleWithRunLoop(this->m_stream, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
+        FSEventStreamRef m_stream = nullptr;
+        dispatch_queue_t m_queue = nullptr;
 
-            /*
-                1. done.
-                2. done.
-                3. The application tells the file system events daemon to start sending events by calling FSEventStreamStart.
-            */
-            FSEventStreamStart(this->m_stream);
+        std::atomic<int> m_errno{0};
+        uint32_t m_mask = ItsFileMonitorMask::All;
 
-            CFRunLoopRef runLoop = CFRunLoopGetCurrent();
-            CFRunLoopTimerContext context = {0, this, NULL, NULL, NULL};
-            CFRunLoopTimerRef timer = CFRunLoopTimerCreate(kCFAllocatorDefault, 0.030, 0.030, 0, 0, &MyRunLoopCallback, &context); 
-            CFRunLoopAddTimer(runLoop, timer, kCFRunLoopCommonModes);
-            
-            CFRunLoopRun();
-            
-            /*
-                5. The application tells the daemon to stop sending events by calling FSEventStreamStop.
-                6. If the application needs to restart the stream, go to step 3.
-                7. The application unschedules the event from its run loop by calling FSEventStreamUnscheduleFromRunLoop.
-                8. The application invalidates the stream by calling FSEventStreamInvalidate.
-                9. The application releases its reference to the stream by calling FSEventStreamRelease.
-            */
-            FSEventStreamStop(this->m_stream);
-            FSEventStreamUnscheduleFromRunLoop(this->m_stream, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
-            FSEventStreamInvalidate(this->m_stream);
-            FSEventStreamRelease(this->m_stream);
-        }
+        std::string m_pathname;
 
-        static void MyRunLoopCallback(CFRunLoopTimerRef timer, void *info)
-        {
-            const ItsFileMonitor* pthis = reinterpret_cast<ItsFileMonitor*>(info);
-            if ( pthis->m_bStopped ) {
-                CFRunLoopStop(CFRunLoopGetCurrent());
-            }
-        }
+        std::atomic<bool> m_bPaused{false};
+        std::atomic<bool> m_bStopped{false};
+        bool m_bInitWithError = true;
 
-        static void MonitorCallback(
-            ConstFSEventStreamRef streamRef,
-            void *clientCallBackInfo,
+        std::function<void(const std::string&, uint32_t)>
+            m_callback;
+
+    private:
+        static void EventCallback(
+            ConstFSEventStreamRef stream,
+            void* clientInfo,
             size_t numEvents,
-            void *eventPaths,
+            void* eventPaths,
             const FSEventStreamEventFlags eventFlags[],
             const FSEventStreamEventId eventIds[])
         {
-            for ( auto obj : ItsFileMonitor::s_objects ) {
-                if ( obj->m_stream == streamRef ) {
-                    if ( obj->m_bStopped ) {
-                        CFRunLoopStop(CFRunLoopGetCurrent());
-                        return;
-                    }
-                    if ( obj->m_bPaused ) {
-                        return;
-                    }
+            auto* self = static_cast<ItsFileMonitor*>(clientInfo);
 
-                    char **paths = reinterpret_cast<char **>(eventPaths);
-                    for (int i = 0; i < numEvents; i++) {
-                        ItsFileMonitorEvent event{0};
-                        event.eventId = eventIds[i];
-                        event.eventFlag = eventFlags[i];
-                        event.path = paths[i];
-                        
-                        obj->m_func(event);
-                    }
-                    
+            if (self->m_bStopped.load() ||
+                self->m_bPaused.load())
+                return;
+
+            auto** paths = static_cast<char**>(eventPaths);
+
+            for (size_t i = 0; i < numEvents; ++i)
+            {
+                if (self->m_bStopped.load() ||
+                    self->m_bPaused.load())
                     break;
+
+                uint32_t flags = eventFlags[i];
+
+                // Forward matching events, plus notifications
+                // that require the directory to be rescanned.
+                constexpr uint32_t rescanFlags =
+                    kFSEventStreamEventFlagMustScanSubDirs |
+                    kFSEventStreamEventFlagUserDropped |
+                    kFSEventStreamEventFlagKernelDropped |
+                    kFSEventStreamEventFlagRootChanged;
+
+                if (!(flags & self->m_mask) &&
+                    !(flags & rescanFlags))
+                    continue;
+
+                try
+                {
+                    self->m_callback(paths[i], flags);
+                }
+                catch (...)
+                {
+                    // Prevent exceptions from crossing the
+                    // C callback boundary.
                 }
             }
         }
 
     public:
-        ItsFileMonitor(const string pathname, function<void(ItsFileMonitorEvent&)> func)
-            : ItsFileMonitor(pathname, (ItsFileMonitorMask::FileEvents), func)
+        ItsFileMonitor(
+            const std::string& pathname,
+            std::function<void(
+                const std::string&, uint32_t)> func)
+            : ItsFileMonitor(
+                pathname,
+                ItsFileMonitorMask::All,
+                std::move(func))
         {
-            
         }
-        ItsFileMonitor(const string pathname, uint32_t mask, function<void(ItsFileMonitorEvent&)> func)
-            :   m_pathname(pathname),
-                m_func(func),
-                m_mask(mask),
-                m_bPaused(false),
-                m_bStopped(false)
-        {
-            if (ItsDirectory::Exists(this->m_pathname) ) {
-                /*
-                    1. The application creates a stream by calling FSEventStreamCreate or FSEventStreamCreateRelativeToDevice.
-                */
-                this->m_callback = &ItsFileMonitor::MonitorCallback;
-                this->m_refPathname = CFStringCreateWithCString(kCFAllocatorDefault, pathname.c_str(), kCFStringEncodingUTF8);
-                this->m_pathsToWatch = CFArrayCreate(nullptr, reinterpret_cast<void**>(&this->m_refPathname),1,nullptr);
-                
-                // 1.
-                this->m_stream = FSEventStreamCreate(
-                                            kCFAllocatorDefault,
-                                            this->m_callback,
-                                            this->m_callbackContext,
-                                            this->m_pathsToWatch,
-                                            kFSEventStreamEventIdSinceNow,
-                                            this->m_latency,
-                                            this->m_mask);
 
-                if ( this->m_stream != nullptr ) {
-                    ItsFileMonitor::s_objects.push_back(this);
-                    this->m_thread = thread(&ItsFileMonitor::ExecuteDispatchThread, this);
+        ItsFileMonitor(
+            const std::string& pathname,
+            uint32_t mask,
+            std::function<void(
+                const std::string&, uint32_t)> func)
+            : m_pathname(pathname),
+            m_mask(mask),
+            m_callback(std::move(func))
+        {
+            struct stat st{};
+
+            if (stat(m_pathname.c_str(), &st) == -1)
+            {
+                m_errno.store(errno);
+                return;
+            }
+
+            if (!S_ISDIR(st.st_mode))
+            {
+                m_errno.store(ENOTDIR);
+                return;
+            }
+
+            CFStringRef path = CFStringCreateWithCString(
+                kCFAllocatorDefault,
+                m_pathname.c_str(),
+                kCFStringEncodingUTF8
+            );
+
+            if (!path)
+            {
+                m_errno.store(EINVAL);
+                return;
+            }
+
+            const void* values[] = { path };
+
+            CFArrayRef paths = CFArrayCreate(
+                kCFAllocatorDefault,
+                values,
+                1,
+                &kCFTypeArrayCallBacks
+            );
+
+            CFRelease(path);
+
+            if (!paths)
+            {
+                m_errno.store(ENOMEM);
+                return;
+            }
+
+            FSEventStreamContext context{};
+            context.info = this;
+
+            FSEventStreamCreateFlags flags =
+                kFSEventStreamCreateFlagFileEvents |
+                kFSEventStreamCreateFlagNoDefer;
+
+            m_stream = FSEventStreamCreate(
+                kCFAllocatorDefault,
+                &ItsFileMonitor::EventCallback,
+                &context,
+                paths,
+                kFSEventStreamEventIdSinceNow,
+                0.1,
+                flags
+            );
+
+            CFRelease(paths);
+
+            if (!m_stream)
+            {
+                m_errno.store(EIO);
+                return;
+            }
+
+            m_queue = dispatch_queue_create(
+                "net.itsoftware.filemonitor",
+                DISPATCH_QUEUE_SERIAL
+            );
+
+            if (!m_queue)
+            {
+                m_errno.store(ENOMEM);
+                return;
+            }
+
+            FSEventStreamSetDispatchQueue(
+                m_stream,
+                m_queue
+            );
+
+            if (!FSEventStreamStart(m_stream))
+            {
+                m_errno.store(EIO);
+                return;
+            }
+
+            m_bInitWithError = false;
+        }
+
+        bool GetInitWithError() const
+        {
+            return m_bInitWithError;
+        }
+
+        int GetInitWithErrorErrno() const
+        {
+            return m_errno.load();
+        }
+
+        void Pause()
+        {
+            m_bPaused.store(true);
+        }
+
+        void Resume()
+        {
+            m_bPaused.store(false);
+        }
+
+        bool IsPaused() const
+        {
+            return m_bPaused.load();
+        }
+
+        void Stop()
+        {
+            if (m_bStopped.exchange(true))
+                return;
+
+            if (m_stream && !m_bInitWithError)
+                FSEventStreamStop(m_stream);
+        }
+
+        bool IsStopped() const
+        {
+            return m_bStopped.load();
+        }
+
+        ~ItsFileMonitor()
+        {
+            Stop();
+
+            if (m_stream)
+            {
+                FSEventStreamInvalidate(m_stream);
+                FSEventStreamRelease(m_stream);
+                m_stream = nullptr;
+            }
+
+            if (m_queue)
+            {
+                // Ensure any in-flight callback has finished
+                // before destroying the callback's context.
+                dispatch_sync_f(
+                    m_queue,
+                    nullptr,
+                    [](void*) {}
+                );
+
+                dispatch_release(m_queue);
+                m_queue = nullptr;
+            }
+        }
+
+        ItsFileMonitor(const ItsFileMonitor&) = delete;
+        ItsFileMonitor& operator=(const ItsFileMonitor&) = delete;
+    };
+
+    //
+    // class: ItsDaemon
+    //
+    // (i): Linux daemon plugin
+    //
+    class ItsDaemon
+    {
+    private:
+        int m_deamonRetVal;
+        struct sigaction m_saT;
+        struct sigaction m_saC;
+        struct sigaction m_saH;
+        inline static bool s_sigterm = false;
+        inline static bool s_sighup = false;
+        inline static function<void(void)> s_fnSigTerm;
+        inline static function<void(void)> s_fnSigCont;
+        inline static function<void(void)> s_fnSigHup;
+    protected:
+        static void SigHandler(int sig) {
+            switch(sig)
+            {                
+                case SIGTERM:
+                    ItsDaemon::s_sigterm = true;
+                    if (ItsDaemon::s_fnSigTerm != nullptr) {
+                        ItsDaemon::s_fnSigTerm();
+                    }
+                    break;
+                case SIGCONT:                    
+                    if (ItsDaemon::s_fnSigCont != nullptr) {
+                        ItsDaemon::s_fnSigCont();
+                    }
+                    break;
+                case SIGHUP:
+                    ItsDaemon::s_sighup = true;
+                    if (ItsDaemon::s_fnSigHup != nullptr) {
+                        ItsDaemon::s_fnSigHup();
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        int BecomeDaemon(int flags)
+        {
+            int fd;
+
+            switch(fork()) {
+                case -1: return -1;
+                case 0: break;
+                default: _exit(EXIT_SUCCESS);
+            }
+
+            if (setsid() == -1) {
+                return -1;
+            }
+
+            switch(fork()) {
+                case -1: return -1;
+                case 0: break;
+                default: _exit(EXIT_SUCCESS);
+            }
+
+            if (!(flags & 010)) {
+                umask(0);
+            }
+
+            if (!(flags & 01)) {
+                chdir("/");
+            }
+
+            if (!(flags & 02)) {
+                int maxfd = sysconf(_SC_OPEN_MAX);
+                if (maxfd == -1) {
+                    maxfd = 8192;
+                }
+                for (fd = 0; fd < maxfd; fd++) {
+                    close(fd);
+                }
+            }
+
+            if (!(flags & 04)) {
+                close(STDIN_FILENO);
+
+                fd = open("/dev/null", O_RDWR);
+
+                if ( fd != STDIN_FILENO) {
+                    return -1;
+                }
+                if (dup2(STDIN_FILENO, STDOUT_FILENO) != STDOUT_FILENO) {
+                    return -1;
+                }
+                if (dup2(STDIN_FILENO, STDERR_FILENO) != STDERR_FILENO) {
+                    return -1;
+                }
+            }
+
+            return 0;
+        }
+
+    public:            
+        //
+        // Method: Constructor.
+        //
+        // (i): Constructor.
+        //
+        explicit ItsDaemon()
+        : ItsDaemon(0) {
+
+        }
+        //
+        // Method: Constructor
+        //
+        // (i): Constructor.
+        //
+        explicit ItsDaemon(int flags) {            
+            this->m_deamonRetVal = this->BecomeDaemon(flags);
+            if ( this->m_deamonRetVal == 0 ) {
+                // SIGTERM
+                sigemptyset(&this->m_saT.sa_mask);
+                this->m_saT.sa_flags = SA_RESTART;
+                this->m_saT.sa_handler = ItsDaemon::SigHandler;
+                if (sigaction(SIGTERM,&this->m_saT, NULL) == -1 ) {
+                    _exit(-1);
+                }
+                // SIGCONT
+                sigemptyset(&this->m_saC.sa_mask);
+                this->m_saC.sa_flags = SA_RESTART;
+                this->m_saC.sa_handler = ItsDaemon::SigHandler;
+                if (sigaction(SIGCONT,&this->m_saC, NULL) == -1 ) {
+                    _exit(-1);
+                }
+                // SIGHUP
+                sigemptyset(&this->m_saH.sa_mask);
+                this->m_saH.sa_flags = SA_RESTART;
+                this->m_saH.sa_handler = ItsDaemon::SigHandler;
+                if (sigaction(SIGHUP,&this->m_saH, NULL) == -1 ) {
+                    _exit(-1);
                 }
             }
         }
-        void Pause() {
-            this->m_bPaused = true;
+        //
+        // Method: WasDaemonSuccessful
+        //
+        // (i): Returnes true is daemon was correctly set up. false otherwise.
+        //
+        bool GetInitWithError() {
+            return (this->m_deamonRetVal != 0);
         }
-        void Resume() {
-            this->m_bPaused = false;
+        //
+        // Function: GetSigTerm
+        //
+        // (i): normal daemon termination signal. should shut down daemon.
+        //
+        static bool GetSigTerm() {
+            return ItsDaemon::s_sigterm;
+        }        
+        //
+        // Function: GetSigHup
+        //
+        // (i): normal reload of configuration data signal for daemons.
+        //
+        static bool GetSigHup() {
+            return ItsDaemon::s_sighup;
         }
-        bool IsPaused() {
-            return this->m_bPaused;
-        }
-        void Stop() {
-            this->m_bStopped = true;
-        }
-        bool IsStopped()
+        //
+        // Function: ClearSignals
+        //
+        // (i): Resets signal flags to not set.
+        //
+        static void ClearSignalFlags()
         {
-            return this->m_bStopped;
+            s_sigterm = false;
+            s_sighup = false;
         }
-        ~ItsFileMonitor()
+        //
+        // Function: SetSigKill
+        //
+        // (i): set handler for SIGKILL
+        //
+        static void SetSigTerm(function<void(void)> fn)
         {
-            this->Stop();
-            
-            if ( this->m_thread.joinable() ) {
-                this->m_thread.join();
-            }
-
-            auto itr = std::find(begin(ItsFileMonitor::s_objects), end(ItsFileMonitor::s_objects), this);
-            if ( itr != end(ItsFileMonitor::s_objects) ) {
-                ItsFileMonitor::s_objects.erase(itr);
-            }
+            ItsDaemon::s_fnSigTerm = fn;
+        }
+        //
+        // Function: SetSigKill
+        //
+        // (i): set handler for SIGCONT
+        //
+        static void SetSigCont(function<void(void)> fn)
+        {
+            ItsDaemon::s_fnSigCont = fn;
+        }
+        //
+        // Function: SetSigHup
+        //
+        // (i): set handler for SIGHUP
+        //
+        static void SetSigHup(function<void(void)> fn)
+        {
+            ItsDaemon::s_fnSigHup = fn;
         }
     };
-} // namespace ItSoftware::macOS::Core
+} // namespace ItSoftware::Linux::Core

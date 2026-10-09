@@ -10,20 +10,26 @@
 //
 #include <iostream>
 #include <string>
+#include <chrono>
+#include <vector>
+#include <thread>
+#include <memory>
 #include "../include/itsoftware-macos.h"
 #include "../include/itsoftware-macos-core.h"
+#include "../include/itsoftware-macos-ipc.h"
 
-namespace ItSoftware::CppIncludeMacOS::TestApplication
+namespace ItSoftware::CppIncludeLinux::TestApplication
 {
     //
     // using
     //
     using std::cout;
     using std::endl;
-    using std::ends;
+    using std::vector;
+    using std::thread;
     using std::string;
     using std::stringstream;
-    using std::vector;
+    using std::to_string;
     using std::unique_ptr;
     using std::make_unique;
     using ItSoftware::macOS::ItsString;
@@ -33,8 +39,9 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
     using ItSoftware::macOS::ItsRandom;
     using ItSoftware::macOS::ItsDateTime;
     using ItSoftware::macOS::ItsLog;
+    using ItSoftware::macOS::ItsLogType;
+    using ItSoftware::macOS::ItsLogStatus;
     using ItSoftware::macOS::ItsDataSizeStringType;
-    using ItSoftware::macOS::ItsDateTime;
     using ItSoftware::macOS::ItsID;
     using ItSoftware::macOS::ItsCreateIDOptions;
     using ItSoftware::macOS::Core::ItsTimer;
@@ -45,12 +52,29 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
     using ItSoftware::macOS::Core::ItsDirectory;
     using ItSoftware::macOS::Core::ItsError;
     using ItSoftware::macOS::Core::ItsFileMonitor;
-    using ItSoftware::macOS::Core::ItsFileMonitorEvent;
     using ItSoftware::macOS::Core::ItsFileMonitorMask;
-
+    using ItSoftware::macOS::IPC::ItsSocket;
+    using ItSoftware::macOS::IPC::ItsSocketStreamServer;
+    using ItSoftware::macOS::IPC::ItsSocketStreamClient;
+    using ItSoftware::macOS::IPC::ItsSocketConType;
+    using ItSoftware::macOS::IPC::ItsSocketDomain;
+    using ItSoftware::macOS::IPC::ItsSocketDatagramServer;
+    using ItSoftware::macOS::IPC::ItsSocketDatagramClient;
+    using ItSoftware::macOS::IPC::ItsPipe;
+    using ItSoftware::macOS::IPC::ItsSvMsgQueue;
+    using ItSoftware::macOS::IPC::ItsSvMsgFlags;
+    using ItSoftware::macOS::IPC::ItsSvMsg1k;
+    using ItSoftware::macOS::IPC::ItsFifoServer;
+    using ItSoftware::macOS::IPC::ItsFifoClient;
+    using ItSoftware::macOS::IPC::ItsFifoHeader;
+    using ItSoftware::macOS::Core::ItsTimeTracker;
+    using ItSoftware::macOS::DebugOnly;
+    
     //
     // Function Prototypes
     //
+    void TestItsSocketDatagramClientServerStart();
+    void TestItsSocketStreamClientServerStart();
     void TestItsConvert();
     void TestItsRandom();
     void TestItsTime();
@@ -67,32 +91,56 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
     void TestItsFileMonitorStart();
     void TestItsFileMonitorStop();
     void ExitFn();
-    void PrintTestHeader(string txt);
-    void PrintTestSubHeader(string txt);
-    void PrintTestApplicationEvent(string event);
-    void HandleFileEvent(ItsFileMonitorEvent& event);
+    void PrintHeader(const string& txt);
+    void PrintSubHeader(const string& txt);
+    void PrintApplicationEvent(const string& event);
+    void HandleFileEvent(const string& filename , uint32_t event);
+    void TestItsSocketStreamClientServerStop();
+    void TestItsSocketDatagramClientServerStop();
+    void TestItsPipe();
+    void TestItsSvMsgQueue();
+    void TestItsFifo();
+    void InitializeTestDirectory();
+    void CleanupTestDirectory();
 
     //
-    // #define
+    // constexpr
     //
-    #define CLR_GREEN      "\033[32m"
-    #define CLR_WHITE      "\033[37;1m"
-    #define CLR_RESET      "\033[0m"
+    constexpr auto COLOR_GREEN = "\033[32m";
+    constexpr auto COLOR_WHITE = "\033[37;1m";
+    constexpr auto COLOR_RESET = "\033[0m";
 
     //
     // global data
     //
     ItsTimer g_timer;
-    char g_filename[] = "/Users/kjetilso/test.txt";
-    char g_copyToFilename[] = "/Users/kjetilso/test2.txt";
-    char g_shredFilename[] = "/Users/kjetilso/test2shred.txt";
-    string g_path1("/Users");
-    string g_path2("/kjetilso/test.txt");
-    string g_invalidPath("Users\0/kjetilso");
-    string g_directoryRoot("/Users/kjetilso");
-    string g_creatDir("/Users/kjetilso/testdir");
-    vector<string> g_fileMonNames;
     unique_ptr<ItsFileMonitor> g_fm;
+    vector<string> g_fileMonNames;
+    char g_filename[] = "/tmp/CppIncludeLinux/test.txt";
+    char g_copyToFilename[] = "/tmp/CppIncludeLinux/test2.txt";
+    char g_shredFilename[] = "/tmp/CppIncludeLinux/test2shred.txt";
+    string g_path1("/tmp");
+    string g_path2("/CppIncludeLinux/test.txt");
+    string g_invalidPath("home\0/kjetilso");
+    string g_directoryRoot("/tmp/CppIncludeLinux/");
+    string g_creatDir("/tmp/CppIncludeLinux/testdir");
+
+    //
+    // global data, IPC
+    //
+    unique_ptr<ItsSocketStreamServer> g_socket_stream_server;
+    unique_ptr<ItsSocketStreamClient>  g_socket_stream_client;
+    unique_ptr<ItsSocketDatagramServer> g_socket_dg_server;
+    unique_ptr<ItsSocketDatagramClient>  g_socket_dg_client;
+    vector<string> g_socket_stream_traffic;
+    vector<string> g_socket_dg_traffic;
+    unique_ptr<thread> g_socket_stream_thread1;
+    unique_ptr<thread> g_socket_stream_thread2;
+    unique_ptr<thread> g_socket_dg_thread1;
+    unique_ptr<thread> g_socket_dg_thread2;
+    struct sockaddr_un g_addr{0};
+    struct sockaddr_un g_saddr{0};
+    struct sockaddr_un g_caddr{0};
 
     //
     // Function: ExitFn
@@ -102,7 +150,7 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
     void ExitFn()
     {
         cout << endl;
-        PrintTestApplicationEvent("Completed");
+        PrintApplicationEvent("Completed");
     }
 
     //
@@ -112,11 +160,27 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
     //
     int main(int argc, const char* argv[])
     {
+        DebugOnly<ItsTimeTracker> tt("main");
+
+        // Set exit handler
         atexit(ExitFn);
 
-        PrintTestApplicationEvent("Started");
+        //
+        // Initialize test directory.
+        //
+        InitializeTestDirectory();
 
+        //
+        // Start.
+        //
+        PrintApplicationEvent("Started");
+
+        //
+        // Do all tests.
+        //
         TestItsTimerStart();
+        TestItsSocketStreamClientServerStart();
+        TestItsSocketDatagramClientServerStart();
         TestItsFileMonitorStart();
         TestItsConvert();
         TestItsRandom();
@@ -130,58 +194,90 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
         TestItsPath();
         TestItsDirectory();
         TestItsFileMonitorStop();
+        TestItsSocketDatagramClientServerStop();
+        TestItsSocketStreamClientServerStop();
+        TestItsPipe();
+        TestItsSvMsgQueue();
+        TestItsFifo();
         TestItsTimerStop();
+        
+        //
+        // Cleanup test directory.
+        //
+        CleanupTestDirectory();
 
+        //
+        // Exit all ok
+        //
         return EXIT_SUCCESS;
     }
 
     //
-    // Function: PrintTestApplicationEvent
+    // Function: InitializeTestDirectory
+    //
+    // (i): Initialize the test directory.
+    //
+    void InitializeTestDirectory()
+    {
+        CleanupTestDirectory();
+        ItsDirectory::CreateDirectory(g_directoryRoot, ItsFile::CreateMode("rwx","rwx","rwx"));
+    }
+
+    //
+    // Function: CleanupTestDirectory
+    //
+    // (i): Remove test directory if exists.
+    //
+    void CleanupTestDirectory()
+    {
+        if ( ItsDirectory::Exists(g_directoryRoot) ) {
+            ItsFile::Delete(g_directoryRoot);
+        }
+    }
+
+    //
+    // Function: PrintApplicationEvent
     //
     // (i): prints application event string.
     //
-    void PrintTestApplicationEvent(string event)
+    void PrintApplicationEvent(const string& event)
     {
-        cout << CLR_RESET << CLR_GREEN;
-        
+        cout << COLOR_RESET << COLOR_GREEN;
         cout << std::setw(80) << std::setfill('#') << std::left << "## Test Application " << endl;
-        
-        cout << CLR_RESET << CLR_WHITE;
-        
+        cout << COLOR_RESET << COLOR_WHITE;
         cout << "> "<< event << " <" << endl;
     }
 
     //
-    // Function: PrintTestHeader
+    // Function: PrintHeader
     //
     // (i): Prints a tests header.
     //
-    void PrintTestHeader(string txt)
+    void PrintHeader(const string& txt)
     {
-        cout << CLR_RESET << CLR_GREEN;
-
+        cout << COLOR_RESET << COLOR_GREEN;
         cout << endl;
 
         stringstream ss;
         ss << " " << txt << " ";
         cout << ItsString::WidthExpand(ss.str(), 80, '_', ItsExpandDirection::Middle) << endl;
 
-        cout << CLR_RESET << CLR_WHITE;
+        cout << COLOR_RESET << COLOR_WHITE;
     }
 
     //
-    // Function: PrintTestSubHeader
+    // Function: PrintSubHeader
     //
     // (i): Prints a tests sub header.
     //
-    void PrintTestSubHeader(string txt)
+    void PrintSubHeader(const string& txt)
     {
-        cout << CLR_RESET << CLR_GREEN;
+        cout << COLOR_RESET << COLOR_GREEN;
 
         cout << endl;
         cout << "__ " << txt << " __" << endl;
 
-        cout << CLR_RESET << CLR_WHITE;
+        cout << COLOR_RESET << COLOR_WHITE;
     }
 
     //
@@ -191,9 +287,9 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
     //
     void TestItsConvert()
     {
-        PrintTestHeader("ItsConvert");
+        PrintHeader("ItsConvert");
 
-        PrintTestSubHeader("ToNumber");
+        PrintSubHeader("ToNumber");
         cout << R"(ItsConvert::ToNumber<int>("-1234"))" << endl;
         cout << "> " << ItsConvert::ToNumber<int>("-1234") << endl;
         cout << R"(ItsConvert::ToNumber<unsigned int>("1234"))" << endl;
@@ -217,7 +313,7 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
         cout << R"(ItsConvert::ToNumber<unsigned short>("40001"))" << endl;
         cout << "> " << ItsConvert::ToNumber<unsigned short>("40001") << endl;
 
-        PrintTestSubHeader("ToString");
+        PrintSubHeader("ToString");
         cout << R"(ItsConvert::ToString<int>(-1234))" << endl;
         cout << R"(> ")" << ItsConvert::ToString<int>(-1234) << R"(")" << endl;
         cout << R"(ItsConvert::ToString<unsigned int>(1234))" << endl;
@@ -241,13 +337,13 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
         cout << R"(ItsConvert::ToString<unsigned short>(40001))" << endl;
         cout << R"(> ")" << ItsConvert::ToString<unsigned short>(40001) << R"(")" << endl;
         
-        PrintTestSubHeader("ToStringFormatted");
+        PrintSubHeader("ToStringFormatted");
         cout << R"(ItsConvert::ToStringFormatted(256810246))" << endl;
         cout << R"(> ")" << ItsConvert::ToStringFormatted(256810246) << R"(")" << endl;
         cout << R"(ItsConvert::ToStringFormatted(256810246, L' '))" << endl;
         cout << R"(> ")" << ItsConvert::ToStringFormatted(256810246, L' ') << R"(")" << endl;
         
-        PrintTestSubHeader("ToDataSizeString");
+        PrintSubHeader("ToDataSizeString");
         cout << R"(ItsConvert::ToDataSizeString(1024, 2))" << endl;
         cout << R"(> ")" << ItsConvert::ToDataSizeString(1024, 2) << R"(")" << endl;
         cout << R"(ItsConvert::ToDataSizeString(200100400, 0))" << endl;
@@ -263,7 +359,7 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
         cout << R"(ItsConvert::ToDataSizeString(size_t max, 2, ItsDataSizeStringType::IEC))" << endl;
         cout << R"(> ")" << ItsConvert::ToDataSizeString(SIZE_MAX, 2, ItsDataSizeStringType::IEC) << R"(")" << endl;
 
-        PrintTestSubHeader("ToLongFromHex");
+        PrintSubHeader("ToLongFromHex");
         cout << R"(ItsConvert::ToLongFromHex("0xFF3333"))" << endl;
         cout << "> " << ItsConvert::ToLongFromHex("0xFF3333") << endl;
 
@@ -277,7 +373,7 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
     //
     void TestItsRandom()
     {
-        PrintTestHeader("ItsRandom");
+        PrintHeader("ItsRandom");
 
         cout << "ItsRandom<long>(10'000, 1'000'000)" << endl;
         cout << "> " << ItsRandom<long>(10'000, 1'000'000) << endl;
@@ -302,15 +398,15 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
     //
     void TestItsTime()
     {
-        PrintTestHeader("ItsTime");
+        PrintHeader("ItsTime");
 
-        PrintTestSubHeader("RenderMsToFullString");
+        PrintSubHeader("RenderMsToFullString");
         cout << "ItsTime::RenderMsToFullString(92481379, false)" << endl;
         cout << R"(> ")" << ItsTime::RenderMsToFullString(92481379, false) << R"(")" << endl;
         cout << "ItsTime::RenderMsToFullString(92481379, true)" << endl;
         cout << R"(> ")" << ItsTime::RenderMsToFullString(92481379, true) << R"(")" << endl;
         
-        PrintTestSubHeader("Now + ToString");
+        PrintSubHeader("Now + ToString");
         cout << "ItsDateTime::Now().ToString()" << endl;
         cout << R"(> ")" << ItsDateTime::Now().ToString() << R"(")" << endl;
         cout << R"(ItsDateTime.Now().ToString("s"))" << endl;
@@ -326,7 +422,7 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
     //
     void TestItsString()
     {
-        PrintTestHeader("ItsString");
+        PrintHeader("ItsString");
 
         cout << R"(ItsString::Left("Ab12Cd",4))" << endl;
         cout << R"(> ")" << ItsString::Left("Ab12Cd", 4) << R"(")" << endl;
@@ -347,17 +443,18 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
         stringstream ss;
         ss << "{";
         bool bFirst{true};
-        for (auto s : vs) {
+        for (const auto& s : vs) {
             if ( !bFirst ) {
                 ss << ",";
             }
             ss << R"(")" << s << R"(")";
-            
+
             bFirst = false;            
         }
         ss << "}";
-        ss << ends;
-        cout << "> " << ss.str() << endl;
+        
+        string temp = ss.str();
+        cout << "> " << temp << endl;
         cout << R"(ItsString::WidthExpand ("Kjetil", 30, L'_', ItsExpandDirection:Left))" << endl;
         cout << R"(> ")" << ItsString::WidthExpand("Kjetil", 30, L'_', ItsExpandDirection::Left) << R"(")" << endl;
         cout << R"(ItsString::WidthExpand ("Kjetil", 30, L'_', ItsExpandDirection:Middle))" << endl;
@@ -379,10 +476,10 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
 
         string fileName = "/tmp/test-application.log";
 
-        ItsLog log{fileName};
+        ItsLog log{fileName, true};
         log.LogInformation(ItsLogStatus::OK, "This is an information log item", "Some description here.");
         log.LogWarning(ItsLogStatus::OK, "This is an warning log item", "Some description here.");
-        log.LogError(ItsLogStatus::FAILED, "This is an error log item", "Some description here.");
+        log.LogError(ItsLogStatus::Failure, "This is an error log item", "Some description here.");
         log.LogOther(ItsLogStatus::OK, "This is an other log item", "Some description here.");
         log.LogDebug(ItsLogStatus::OK, "This is an debug log item", "Some description here.");
 
@@ -406,8 +503,8 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
     // (i): Test of ItsFile.
     //
     void TestItsFile()
-    {
-        PrintTestHeader("ItsFile");
+    {        
+        PrintHeader("ItsFile");
 
         ItsFile file;
         cout << R"(file.OpenOrCreate(g_filename,"rwt",ItsFile::CreateMode("rw","rw","rw")))" << endl;
@@ -421,8 +518,8 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
 
         char text[] = "Test Line 1\nTest Line 2\n";
         size_t written(0);
-        cout << "file.Write((void*)text, strlen(text), &written)" << endl;
-        if ( !file.Write(reinterpret_cast<void*>(text), strlen(text), &written) )
+        cout << "file.Write((void*)text,strlen(text), &written)" << endl;
+        if ( !file.Write(reinterpret_cast<void*>(text),strlen(text), &written) )
         {
             cout << "> FAILED: " << ItsError::GetLastErrorDescription() << endl;
             cout << endl;
@@ -439,22 +536,40 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
             return;
         }
         cout << "> Success. Read all text from file " << g_filename << endl;
-        
+                
 
         cout << "file.Close()" << endl;
-        if (!file.Close() ) {
-            cout << "> FAILED: " << ItsError::GetLastErrorDescription() << endl;;
-        }
+        file.Close();
         cout << "> Success" << endl;
 
+        string content;
+        cout << "ItsFile::ReadAllText(str)" << endl;
+        if (!ItsFile::ReadAllText(g_filename, content)) {
+            cout << "> FAILED: " << ItsError::GetLastErrorDescription() << endl;
+            cout << endl;
+            return;
+        }
+        cout << "> Success. Read all text from file " << g_filename << endl;
+        cout << "> Length: " << content.size() << endl;
+
+        vector<string> contentLines;
+        cout << "ItsFile::ReadAllTextLines(str)" << endl;
+        if (!ItsFile::ReadTextAllLines(g_filename, contentLines)) {
+            cout << "> FAILED: " << ItsError::GetLastErrorDescription() << endl;
+            cout << endl;
+            return;
+        }
+        cout << "> Success. Read all text lines from file " << g_filename << endl;
+        cout << "> Line#: " << contentLines.size() << endl;
+        
         cout << "ItsFile::Copy(g_filename, g_shredFilename, true)" << endl;
         if (!ItsFile::Copy(g_filename, g_shredFilename, true)) {
             cout << "> FAILED: " << ItsError::GetLastErrorDescription() << endl;
             cout << endl;
             return;
         }
-        cout << "> SUCCESS. File " << g_filename << " successfully copied to " << g_shredFilename << endl;
-
+        cout << "> Success. File " << g_filename << " successfully copied to " << g_shredFilename << endl;
+        
         cout << "ItsFile::Copy(g_filename, g_copyToFilename, true)" << endl;
         if (!ItsFile::Copy(g_filename, g_copyToFilename, true)) {
             cout << "> FAILED: " << ItsError::GetLastErrorDescription() << endl;
@@ -479,13 +594,14 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
         }
         cout << "> Success. File " << g_copyToFilename << " deleted" << endl;
 
-        cout << "ItsFile::Shred(g_shredFilename,true)" << endl;
-        if (!ItsFile::Shred(g_shredFilename, true)) {
+        cout << "ItsFile::Shred(g_shredFilename, false)" << endl;
+        if (!ItsFile::Shred(g_shredFilename, false)) {
             cout << "> FAILED: " << ItsError::GetLastErrorDescription() << endl;
             cout << endl;
             return;
         }
-        cout << "> Success. File " << g_shredFilename << " was shreded" << endl;
+        cout << "> Success. File " << g_shredFilename << " shreded" << endl;
+
 
         cout << endl;
     }
@@ -497,7 +613,7 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
     //
     void TestItsTimerStart()
     {
-        PrintTestHeader("ItsTimer Start");
+        PrintHeader("ItsTimer::Start");
 
         g_timer.Start();
         cout << "Timer started..." << endl;
@@ -512,7 +628,7 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
     //
     void TestItsTimerStop()
     {
-        PrintTestHeader("ItsTimer Stop");
+        PrintHeader("ItsTimer::Stop");
 
         g_timer.Stop();
         cout << "Elapsed Time: " << ItsTime::RenderMsToFullString(g_timer.GetMilliseconds(),true) << endl;
@@ -527,7 +643,7 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
     //
     void TestItsDateTime()
     {
-        PrintTestHeader("ItsDateTime");
+        PrintHeader("ItsDateTime");
 
         auto now = ItsDateTime::Now();
         cout << "ItsDateTime.Now(): " << now.ToString() << endl;
@@ -556,7 +672,7 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
     //
     void TestItsID()
     {
-        PrintTestHeader("ItsID");
+        PrintHeader("ItsID");
 
         cout << "ItsID::CreateID(12, ItsCreateIDOptions::LowerAndUpperCase, false)" << endl;
         cout << R"(> ")" << ItsID::CreateID(12, ItsCreateIDOptions::LowerAndUpperCase, false) << R"(")" << endl;
@@ -585,7 +701,7 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
     //
     void TestItsGuid()
     {
-        PrintTestHeader("ItsGuid");
+        PrintHeader("ItsGuid");
 
         cout << "ItsGuid::CreateGuid()" << endl;
         cout << R"(> ")" << ItsGuid::CreateGuid() << R"(")" << endl;
@@ -606,7 +722,7 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
             cout << R"(> ")" << ItsGuid::ToString(guid, ItsGuidFormat::MicrosoftCompactFormat, true) << R"(")" << endl;
             cout << "ItsGuid::ToString(guid,ItsGuidFormat::MicrosoftPrefixedCompactFormat, true)" << endl;
             cout << R"(> ")" << ItsGuid::ToString(guid, ItsGuidFormat::MicrosoftPrefixedCompactFormat, true) << R"(")" << endl;
-        }        
+        }
 
         cout << endl;
     }
@@ -618,7 +734,7 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
     //
     void TestItsPath()
     {
-        PrintTestHeader("ItsPath");
+        PrintHeader("ItsPath");
 
         string path = ItsPath::Combine(g_path1, g_path2);
         cout << R"(ItsPath::Exists(path))" << endl;
@@ -644,8 +760,9 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
         cout << R"(ItsPath::IsPathValid(path))" << endl; 
         cout << R"(> )" << ((ItsPath::IsPathValid(path)) ? "true" : "false") << endl;
         cout << R"(ItsPath::IsPathValid(g_invalidPath))" << endl; 
+        cout << "INVALID PATH=" << g_invalidPath << endl; 
         cout << R"(> )" << ((ItsPath::IsPathValid(g_invalidPath)) ? "true" : "false") << endl;
-        cout << R"(ItsPath::GetParentDirectory(path))" << endl;
+        cout << R"(ItsPath::GetParentDirectory("path"))" << endl;
         cout << R"(> )" << ItsPath::GetParentDirectory(path) << endl;
 
         cout << endl;
@@ -658,11 +775,11 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
     //
     void TestItsDirectory()
     {
-        PrintTestHeader("ItsDirectory");
+        PrintHeader("ItsDirectory");
 
         cout << R"(ItsDirectory::Exists(g_directoryRoot))" << endl;
         if (!ItsDirectory::Exists(g_directoryRoot)) {
-            cout << "> Directory " << g_directoryRoot << " does NOT exist" << endl;
+            cout << "> NOT EXISTS" << endl;
         }
         else {
             cout << "> Directory " << g_directoryRoot << " EXISTS" << endl;
@@ -672,7 +789,7 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
         auto result = ItsDirectory::GetDirectories(g_directoryRoot);
         if (result.size() > 0) {
             cout << "> Success. Found " << result.size() << " sub-directories under " << g_directoryRoot << endl;
-            for (auto r : result) {
+            for (const auto& r : result) {
                 cout << ">> " << r << endl;
             }
         }
@@ -684,7 +801,7 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
         auto result2 = ItsDirectory::GetFiles(g_directoryRoot);
         if (result2.size() > 0) {
             cout << "> Success. Found " << result2.size() << " files under " << g_directoryRoot << endl;
-            for (auto r : result2) {
+            for (const auto& r : result2) {
                 cout << ">> " << r << endl;
             }
         }
@@ -714,14 +831,20 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
     //
     // Function: TestItsFileMonitor
     //
-    // (i): Tests ItsFileMonitor.
+    // (i): Tests ItsFileMonitor. 
     //
     void TestItsFileMonitorStart()
     {
-        g_fm = make_unique<ItsFileMonitor>(g_directoryRoot, (ItsFileMonitorMask::FileEvents), HandleFileEvent);  
-        
-        PrintTestHeader("ItsFileMonitor Start");
-        cout << "File monitor monitoring directory '" << g_directoryRoot << "' with mask 'ItsFileMonitorMask::FileEvents'" << endl;
+        PrintHeader("ItsFileMonitor Start");
+
+        g_fm = make_unique<ItsFileMonitor>(g_directoryRoot, ItsFileMonitorMask::All, HandleFileEvent);  
+        if (g_fm->GetInitWithError()) {
+            cout << "ItsFileMonitor error on init: " << strerror(g_fm->GetInitWithErrorErrno()) << endl;
+            cout << endl;
+            return;
+        }
+
+        cout << "File monitor monitoring directory '" << g_directoryRoot << "' with mask 'ItsFileMonitorMask::Modify,Open,Access,Create,CloseWrite,CloseNoWrite'" << endl;
         
         cout << endl;
     }
@@ -729,18 +852,21 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
     //
     // Function: TestItsFileMonitor
     //
-    // (i): Tests ItsFileMonitor.
+    // (i): Tests ItsFileMonitor. 
     //
     void TestItsFileMonitorStop()
     {
-        std::this_thread::sleep_for(std::chrono::seconds(2)); // allow for delay in receiving file data
-        g_fm->Stop();
+        PrintHeader("ItsFileMonitor Stop");
 
-        PrintTestHeader("ItsFileMonitor Stop");
-        cout << "File monitor monitoring directory '" << g_directoryRoot << "' with mask 'ItsFileMonitorMask::FileEvents'" << endl;
-        cout << "Items found:" << endl;
-        for ( auto i : g_fileMonNames ) {
-            cout << ">> " << i << endl;
+        if ( !g_fm->GetInitWithError() ) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            g_fm->Stop();
+
+            cout << "File monitor monitoring directory '" << g_directoryRoot << "' with mask 'ItsFileMonitorMask::Modify,Open,Access,Create,CloseWrite,CloseNoWrite'" << endl;
+            cout << "Events:" << endl;
+            for (const auto& i : g_fileMonNames ) {
+                cout << ">> " << i << endl;
+            }
         }
 
         cout << endl;
@@ -749,86 +875,437 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
     //
     // Function: HandleFileEvent
     //
-    // (i): copy file event names
+    // (i): handle file event.
     //
-    void HandleFileEvent(ItsFileMonitorEvent& event)
+    void HandleFileEvent(const string& filename , uint32_t event)
     {
         stringstream ss;
-        ss << "Name: " << event.path << ", Flag: ";
-        if (event.eventFlag & kFSEventStreamEventFlagNone) {
-            ss << "[kFSEventStreamEventFlagNone] ";
-        }
-        if (event.eventFlag & kFSEventStreamEventFlagMustScanSubDirs) {
-            ss << "[kFSEventStreamEventFlagMustScanSubDirs] ";
-        }
-        if (event.eventFlag & kFSEventStreamEventFlagUserDropped) {
-            ss << "[kFSEventStreamEventFlagUserDropped] ";
-        }
-        if (event.eventFlag & kFSEventStreamEventFlagKernelDropped) {
-            ss << "[kFSEventStreamEventFlagKernelDropped] ";
-        }
-        if (event.eventFlag & kFSEventStreamEventFlagEventIdsWrapped) {
-            ss << "[kFSEventStreamEventFlagEventIdsWrapped] ";
-        }
-        if (event.eventFlag & kFSEventStreamEventFlagHistoryDone) {
-            ss << "[kFSEventStreamEventFlagHistoryDone] ";
-        }
-        if (event.eventFlag & kFSEventStreamEventFlagRootChanged) {
-            ss << "[kFSEventStreamEventFlagRootChanged] ";
-        }
-        if (event.eventFlag & kFSEventStreamEventFlagMount) {
-            ss << "[kFSEventStreamEventFlagMount] ";
-        }
-        if (event.eventFlag & kFSEventStreamEventFlagUnmount) {
-            ss << "[kFSEventStreamEventFlagUnmount] ";
-        }
-        if (event.eventFlag & kFSEventStreamEventFlagItemChangeOwner) {
-            ss << "[kFSEventStreamEventFlagItemChangeOwner] ";
-        }
-        if (event.eventFlag & kFSEventStreamEventFlagItemCreated) {
-            ss << "[kFSEventStreamEventFlagItemCreated] ";
-        }
-        if (event.eventFlag & kFSEventStreamEventFlagItemFinderInfoMod) {
-            ss << "[kFSEventStreamEventFlagItemFinderInfoMod] ";
-        }
-        if (event.eventFlag & kFSEventStreamEventFlagItemInodeMetaMod) {
-            ss << "[kFSEventStreamEventFlagItemInodeMetaMod] ";
-        }
-        if (event.eventFlag & kFSEventStreamEventFlagItemIsDir) {
-            ss << "[kFSEventStreamEventFlagItemIsDir] ";
-        }
-        if (event.eventFlag & kFSEventStreamEventFlagItemIsFile) {
-            ss << "[kFSEventStreamEventFlagItemIsFile] ";
-        }
-        if (event.eventFlag & kFSEventStreamEventFlagItemIsHardlink) {
-            ss << "[kFSEventStreamEventFlagItemIsHardlink] ";
-        }
-        if (event.eventFlag & kFSEventStreamEventFlagItemIsLastHardlink) {
-            ss << "[kFSEventStreamEventFlagItemIsLastHardlink] ";
-        }
-        if (event.eventFlag & kFSEventStreamEventFlagItemIsSymlink) {
-            ss << "[kFSEventStreamEventFlagItemIsSymlink] ";
-        }
-        if (event.eventFlag & kFSEventStreamEventFlagItemModified) {
-            ss << "[kFSEventStreamEventFlagItemModified] ";
-        }
-        if (event.eventFlag & kFSEventStreamEventFlagItemRemoved) {
-            ss << "[kFSEventStreamEventFlagItemRemoved] ";
-        }
-        if (event.eventFlag & kFSEventStreamEventFlagItemRenamed) {
-            ss << "[kFSEventStreamEventFlagItemRenamed] ";
-        }
-        if (event.eventFlag & kFSEventStreamEventFlagItemXattrMod) {
-            ss << "[kFSEventStreamEventFlagItemXattrMod] ";
-        }
-        if (event.eventFlag & kFSEventStreamEventFlagOwnEvent) {
-            ss << "[kFSEventStreamEventFlagOwnEvent] ";
-        }
-        if (event.eventFlag & kFSEventStreamEventFlagItemCloned) {
-            ss << "[kFSEventStreamEventFlagItemCloned] ";
-        }
+        ss << "Name: " << filename << endl;
 
         g_fileMonNames.push_back(ss.str());
+    }
+
+    //
+    // Function: TestItsSocketStreamClientServerStart
+    //
+    // (i): Starts testing socket stream client server.
+    //
+    void TestItsSocketStreamClientServerStart()
+    {
+        PrintHeader("ItsSocketStream[Client/Server] Start");
+
+        g_addr.sun_family = AF_UNIX;
+        
+        g_socket_stream_server = make_unique<ItsSocketStreamServer>(ItsSocketDomain::UNIX, reinterpret_cast<sockaddr*>(&g_addr), sizeof(g_addr), ItsSocketStreamServer::DefaultBackdrop, true);
+        if ( g_socket_stream_server->GetInitWithError()) {
+            cout << "ItsSocketStreamServer, Init with error: " << strerror(g_socket_stream_server->GetInitWithErrorErrno()) << endl;
+        }
+        cout << "ItsSocketStreamServer, Init Ok!" << endl;
+
+        g_socket_stream_client = make_unique<ItsSocketStreamClient>(ItsSocketDomain::UNIX, reinterpret_cast<sockaddr*>(&g_addr), sizeof(g_addr));
+        if ( g_socket_stream_client->GetInitWithError()) {
+            cout << "ItsSocketStreamClient, Init with error: " << strerror(g_socket_stream_client->GetInitWithErrorErrno()) << endl;
+        }
+        cout << "ItsSocketStreamClient, Init Ok!" << endl;
+
+        if ( g_socket_stream_server->GetInitWithError() || g_socket_stream_client->GetInitWithError() ) {
+            return;
+        }
+
+        g_socket_stream_thread1 = make_unique<thread>([] () {
+            struct sockaddr_un accept_addr{0};
+            socklen_t accept_addr_len(0);
+            char buf[1000];
+            bool quit = false;
+            while (!quit) {
+                auto fd = g_socket_stream_server->Accept(reinterpret_cast<sockaddr*>(&accept_addr),&accept_addr_len);
+                if ( fd >= 0 ) {
+                    g_socket_stream_traffic.push_back("g_socket_stream_server.Accept OK");
+                    
+                    auto nr = g_socket_stream_server->Read(fd, buf, 1000);
+                    g_socket_stream_traffic.push_back("g_socket_stream_server.Read " + to_string(nr) + " bytes, " + buf);
+                    
+                    strcpy(buf, "This is a response ECHO ONE!");
+                    auto nw = g_socket_stream_server->Write(fd, buf, strlen(buf)+1);
+                    g_socket_stream_traffic.push_back("g_socket_stream_server.Write " + to_string(nw) + " bytes, " + buf);
+                    quit = true;
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(200));
+            }
+        });
+        g_socket_stream_thread2 = make_unique<thread>([] () {   
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+
+            if (g_socket_stream_client->Connect() == 0) {
+                g_socket_stream_traffic.push_back("g_socket_stream_client.Connect OK");
+
+                char buf[1000] = "This is a test string.";
+                auto nw = g_socket_stream_client->Write(buf, strlen(buf)+1);
+                g_socket_stream_traffic.push_back("g_socket_stream_client.Write " + to_string(nw) + " bytes, " + buf);
+                auto nr = g_socket_stream_client->Read(buf, 1000);
+                g_socket_stream_traffic.push_back("g_socket_stream_client.Read " + to_string(nr) + " bytes, " + buf);
+            
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+            }
+            else {
+                g_socket_stream_traffic.push_back("ItsSocketStreamClient, failed to connect.");
+            }
+        });
+    }
+
+    //
+    // Function: TestItsSocketStreamClientServerStop
+    //
+    // (i): Stop testing socket stream client server.
+    //
+    void TestItsSocketStreamClientServerStop()
+    {
+        PrintHeader("ItsSocketStream[Client/Server] Stop");
+
+        for (const auto& s : g_socket_stream_traffic) {
+            cout << s << endl;
+        }
+
+        cout << "Closing net..." << endl;
+        g_socket_stream_client->Close();
+        g_socket_stream_server->Close();
+        cout << "... net closed" << endl;
+
+        if ( g_socket_stream_thread1 != nullptr ) {
+            cout << "Thread joining..." << endl;
+            g_socket_stream_thread1->join();
+            g_socket_stream_thread2->join();
+            cout << "... threads joined" << endl;
+        }
+    }
+
+    //
+    // Function: TestItsSocketDatagramClientServerStart
+    //
+    // (i): Starts testing socket datagram client server.
+    //
+    void TestItsSocketDatagramClientServerStart()
+    {
+        PrintHeader("ItsSocketDatagram[Client/Server] Start");
+        
+        auto pid = getpid();
+
+        const char SV_SOCK_PATH[] = "/tmp/its-server";
+        g_saddr.sun_family = AF_UNIX;
+        snprintf(g_saddr.sun_path, sizeof(g_saddr.sun_path), "%s", SV_SOCK_PATH);
+        remove(g_saddr.sun_path);
+
+        const char CL_SOCK_PATH[] = "/tmp/its-client";
+        g_caddr.sun_family = AF_UNIX;
+        snprintf(g_caddr.sun_path, sizeof(g_caddr.sun_path), "%s.%i", CL_SOCK_PATH, pid);
+        remove(g_caddr.sun_path);
+        
+        g_socket_dg_server = make_unique<ItsSocketDatagramServer>(ItsSocketDomain::UNIX, reinterpret_cast<sockaddr*>(&g_saddr), sizeof(g_saddr), true);
+        if ( g_socket_dg_server->GetInitWithError()) {
+            cout << "ItsSocketDatagramServer, Init with error: " << strerror(g_socket_dg_server->GetInitWithErrorErrno()) << endl;
+        }
+        else {
+            cout << "ItsSocketDatagramServer, Init Ok!" << endl;
+        }
+
+        g_socket_dg_client = make_unique<ItsSocketDatagramClient>(ItsSocketDomain::UNIX, reinterpret_cast<sockaddr*>(&g_caddr), sizeof(g_caddr), true);
+        if ( g_socket_dg_client->GetInitWithError()) {
+            cout << "ItsSocketDatagramClient, Init with error: " << strerror(g_socket_dg_client->GetInitWithErrorErrno()) << endl;
+        }
+        else {
+            cout << "ItsSocketDatagramClient, Init Ok!" << endl;
+        }
+
+        if ( g_socket_dg_server->GetInitWithError() || g_socket_dg_client->GetInitWithError() ) {
+            return;
+        }
+
+        g_socket_dg_thread1 = make_unique<thread>([] () {
+            struct sockaddr_un accept_addr{0};
+            socklen_t accept_addr_len(0);
+            char buf[1000];
+            bool quit = false;
+            while (!quit) {
+                auto nr = g_socket_dg_server->RecvFrom(buf, 1000, 0, reinterpret_cast<sockaddr*>(&accept_addr),&accept_addr_len);
+                if ( nr > 0 ) {
+                    g_socket_dg_traffic.push_back("g_socket_dg_server.RecvFrom " + to_string(nr) + " bytes, " + buf);
+                
+                    strcpy(buf, "This is a response ECHO ONE!");
+                    auto nw = g_socket_dg_server->SendTo(buf, strlen(buf)+1, 0, reinterpret_cast<sockaddr*>(&g_caddr), sizeof(g_caddr));
+                    g_socket_dg_traffic.push_back("g_socket_dg_server.SendTo " + to_string(nw) + " bytes, " + buf);
+                    
+                    quit = true;
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(200));
+            }
+        });
+
+        g_socket_dg_thread2 = make_unique<thread>([] () {   
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+
+            struct sockaddr_un accept_addr{0};
+            socklen_t accept_addr_len(0);
+
+            char buf[1000] = "This is a test string.";
+            auto nw = g_socket_dg_client->SendTo(buf, strlen(buf)+1, 0, reinterpret_cast<sockaddr*>(&g_saddr), sizeof(g_saddr));
+            g_socket_dg_traffic.push_back("g_socket_dg_client.SendTo " + to_string(nw) + " bytes, " + buf);
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+            bool quit = false;
+            while (!quit)
+            { 
+                auto nr = g_socket_dg_client->RecvFrom(buf, 1000, 0, reinterpret_cast<sockaddr*>(&accept_addr),&accept_addr_len);
+                if ( nr > 0 ) {
+                    g_socket_dg_traffic.push_back("g_socket_dg_client.RecvFrom " + to_string(nr) + " bytes, " + buf);
+                    quit = true;
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(200));
+            }
+        });
+    }
+
+    //
+    // Function: TestItsSocketDatagramClientServerStop
+    //
+    // (i): Stop testing socket datagram client server.
+    //
+    void TestItsSocketDatagramClientServerStop()
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1200));
+
+        PrintHeader("ItsSocketDatagram[Client/Server] Stop");
+
+        for (const auto& s : g_socket_dg_traffic) {
+            cout << s << endl;
+        }
+
+        cout << "Closing net..." << endl;
+        g_socket_dg_client->Close();
+        g_socket_dg_server->Close();
+        cout << "... net closed" << endl;
+
+        if ( g_socket_dg_thread1 != nullptr ) {
+            cout << "Thread joining..." << endl;
+            g_socket_dg_thread1->join();
+            g_socket_dg_thread2->join();
+            cout << "... threads joined" << endl;
+        }
+
+        remove(g_saddr.sun_path);
+        remove(g_caddr.sun_path);
+    }
+
+    //
+    // Function: TestItsPipe
+    //
+    // (i): Test ItsPipe
+    //
+    void TestItsPipe()
+    {
+        PrintHeader("ItsPipe");
+
+        ItsPipe pipe;
+
+        if ( pipe.GetInitWithError() ) {
+            cout << "ItsPipe, Init with error: " << strerror(pipe.GetInitWithErrorErrno()) << endl;
+            return;
+        }
+        cout << "ItsPipe, Init Ok" << endl;
+
+        cout << "ItsPipe, fork() called" << endl;
+        switch(fork()) {
+            case -1:
+            {
+                cout << "ItsPipe fork call failed with error: " << strerror(errno) << endl;
+                break;
+            }
+            case 0:
+            {
+                // child
+                pipe.CloseRead();
+                
+                const char wbuf[ItsPipe::MaxBufferSize] = "This is a testing message!";
+                auto nw = pipe.Write(wbuf, strlen(wbuf)+1);
+                if ( nw < 0 ) {
+                    cout << "ItsPipe, Child::Write Error, " << strerror(errno) << endl;
+                }
+                else {
+                    cout << "ItsPipe, Child::Wrote " << to_string(nw) << " bytes, " << wbuf << endl;
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+                pipe.Close();
+                _exit(0);
+                break;
+            }
+            default:
+            {
+                // parent
+                pipe.CloseWrite();
+
+                std::this_thread::sleep_for(std::chrono::milliseconds(1200));
+
+                char rbuf[ItsPipe::MaxBufferSize];
+                auto nr = pipe.Read(rbuf, ItsPipe::MaxBufferSize);
+                if ( nr < 0 ) {
+                    cout << "ItsPipe, Parent::Read Error, " << strerror(errno) << endl;
+                }
+                else {
+                    cout << "ItsPipe, Parent::Read " << to_string(nr) << " bytes, " << rbuf << endl;
+                }
+
+                pipe.Close();
+            }
+        }
+    }
+
+    //
+    // Function: TesTItsSvMsgQueue
+    //
+    // (i): Tests ItsSvMsgQueue.
+    //
+    void TestItsSvMsgQueue()
+    {
+        PrintHeader("ItsSvMessageQueue");
+        
+        ItsSvMsgQueue queue(IPC_PRIVATE, ItsSvMsgQueue::CreateQueueFlags(true, false, "rw", "rw", "rw"));
+        if ( queue.GetInitWithError() ) {
+            cout << "ItsSvMsgQueue, Init with error: " << strerror(queue.GetInitWithErrorErrno()) << endl;
+            return;
+        }
+        cout << "ItsSvMsgQueue, Init Ok with id: " << to_string(queue.GetMessageQueueId()) << endl;
+
+        cout << "ItsSvMsgQueue, fork() called" << endl;
+        switch(fork()) {
+            case -1:
+            {
+                cout << "ItsSvMsgQueue fork call failed with error: " << strerror(errno) << endl;
+                break;
+            }
+            case 0:
+            {
+                // child
+                ItsSvMsg1k tmp{0};
+                tmp.mtype = 1;
+                strcpy(tmp.mtext, "This is a test message queue message!");
+
+                auto nw = queue.MsgSnd(&tmp, sizeof(tmp), ItsSvMsgQueue::CreateMsgFlags(true,false,false,false));
+                if ( nw == 0 ) {
+                    cout << "ItsSvMsgQueue, Child::MsgSnd Ok: " << tmp.mtext << endl;
+                }
+                else {
+                    cout << "ItsSvMsgQueue, Child::MsgSnd with error: " << strerror(errno) << endl;
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+                _exit(0);
+                break;
+            }
+            default:
+            {
+                // parent
+                ItsSvMsg1k tmp{0};
+
+                std::this_thread::sleep_for(std::chrono::milliseconds(1200));
+
+                auto nr = queue.MsgRcv(&tmp, sizeof(tmp), 0, ItsSvMsgQueue::CreateMsgFlags(true,false,false,false));
+                if ( nr < 0 ) {
+                    cout << "ItsSvMsgQueue, Parent::MsgRcv with error: " << strerror(errno) << endl;
+                }
+                else {
+                    cout << "ItsSvMsgQueue, Parent::MsgRcv Ok: " << to_string(nr) << " bytes: " << tmp.mtext << endl;
+                }
+
+                if ( queue.Delete() == 0 ) {
+                    cout << "ItsSvMessageQueue, Parent::Delete Ok" << endl;
+                }
+                else {
+                    cout << "ItsSvMessageQueue, Parent::Delete with error: " << strerror(errno) << endl;
+                }
+            }
+        }
+    }
+
+    //
+    // Function: TestItsFifo
+    //
+    // (i): Tests ItsFifo.
+    //
+    void TestItsFifo()
+    {
+        PrintHeader("ItsFifo");
+
+        ItsFifoServer fifoServer("/tmp/its-fifo-src", "/tmp/its-fifo_cl", ItsFifoServer::CreateFifoFlags("rw","rw","rw"));
+        if ( fifoServer.GetInitWithError() ) {
+            cout << "ItsFifoServer, Init with error: " << strerror(fifoServer.GetInitWithErrorErrno()) << endl;
+            return;
+        }
+        cout << "ItsFifoServer, Init Ok" << endl;
+
+        cout << "ItsFifo[Server/Client], fork() called" << endl;
+        switch(fork()) {
+            case -1:
+            {
+                cout << "ItsSvMsgQueue fork call failed with error: " << strerror(errno) << endl;
+                break;
+            }
+            case 0:
+            {
+                ItsFifoClient fifoClient("/tmp/its-fifo-src", "/tmp/its-fifo_cl", ItsFifoClient::CreateFifoFlags("rw","rw","rw"));
+                if ( fifoClient.GetInitWithError() ) {
+                    cout << "ItsFifoClient, Init with error: " << strerror(fifoClient.GetInitWithErrorErrno()) << endl;
+                    return;
+                }
+                cout << "ItsFifoClient, Init Ok" << endl;
+
+                // child
+                char buf[] = "This is a sample message for fifo transmission!";
+                ItsFifoHeader tmp{0};
+                tmp.length = strlen(buf)+1;
+                tmp.pid = getpid();
+                
+                auto nw = fifoClient.Write(reinterpret_cast<void*>(buf), &tmp);
+                if ( nw > 0 ) {
+                    cout << "ItsFifoClient, Child::Write Ok: pid=" << to_string(tmp.pid) << ", content=" << buf << endl;
+                }
+                else if (nw == 0)
+                {
+                    cout << "ItsFifoClient, Child::Write with return 0" << endl;
+                }
+                else {
+                    cout << "ItsFifoClient, Child::Write with error: " << strerror(errno) << endl;
+                }
+
+                std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+                fifoClient.Close();
+                _exit(0);
+                break;
+            }
+            default:
+            {
+                // parent
+                unique_ptr<unsigned char[]> buf;
+
+                ItsFifoHeader tmp{0};
+                tmp.length = 0;
+                tmp.pid = getpid();
+                
+                std::this_thread::sleep_for(std::chrono::milliseconds(1200));
+
+                auto nr = fifoServer.Read(&buf, &tmp);
+                
+                if ( nr < 0 ) {
+                    cout << "ItsFifoServer, Parent::Read with error: " << strerror(errno) << endl;
+                }
+                else if ( nr == 0 ) {
+                    cout << "ItsFifoServer, Parent::Read with return 0" << endl;
+                }
+                else {
+                    cout << "ItsFifoServer, Parent::Read Ok: pid=" << to_string(tmp.pid) << ", content=" << buf.get() << endl;
+                }
+
+                fifoServer.Close();
+            }
+        }
     }
 }
 
@@ -836,9 +1313,9 @@ namespace ItSoftware::CppIncludeMacOS::TestApplication
 // Function: main
 //
 // (i): Application entry point.
-//      Redirects to ItSoftware::CppIncludeMacOS::TestApplication::main.
+//      Redirects to ItSoftware::CppIncludeLinux::TestApplication::main.
 //
 int main(int argc, const char* argv[])
 {
-    return ItSoftware::CppIncludeMacOS::TestApplication::main(argc, argv);
+    return ItSoftware::CppIncludeLinux::TestApplication::main(argc, argv);
 }

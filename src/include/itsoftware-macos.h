@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////
-//: Title        : itsoftware-macos.h
-//: Product:     : Cpp.Include.macOS
-//: Date         : 2021-09-21
+//: Title        : itsoftware-linux.h
+//: Product:     : Cpp.Include.Windows
+//: Date         : 2020-05-01
 //: Author       : "Kjetil Kristoffer Solberg" <post@ikjetil.no>
 //: Version      : 1.0.0.0
-//: Descriptions : Implementation of Cpp.Include.macOS.
+//: Descriptions : Implementation of Cpp.Include.Linux.
 #pragma once
 //
 // #include
@@ -13,6 +13,7 @@
 #include <string>
 #include <sstream>
 #include <iostream>
+#include <fstream>
 #include <iomanip>
 #include <exception>
 #include <algorithm>
@@ -21,9 +22,11 @@
 #include <codecvt>
 #include <random>
 #include <functional>
+#include <regex>
+#include <chrono>
+//#include <generator>
 #include <stdlib.h>
 #include <syslog.h>
-#include <os/log.h>
 #include <time.h>
 #include <string.h>
 #include <type_traits>
@@ -37,7 +40,6 @@ namespace ItSoftware::macOS
 	// using
 	//
 	using std::endl;
-	using std::ends;
 	using std::string;
 	using std::stringstream;
 	using std::vector;
@@ -62,7 +64,7 @@ namespace ItSoftware::macOS
 	//
 	template<typename T>
 	const T& as_const(const T& item) { return item; }
-	
+
 	//
 	// Function: ItsAddFlag
 	//
@@ -80,6 +82,23 @@ namespace ItSoftware::macOS
 	{
 		return value & ~flag;
 	}
+
+	//
+	// struct: DebugOnly
+	//
+	// (i): Wraps a value that is only present in Debug builds.
+	//
+	template<class T>
+	struct DebugOnly {
+#ifndef NDEBUG
+		T value;
+		template<class... A> explicit DebugOnly(A&&... a) : value(std::forward<A>(a)...) {}
+		template<class F> void with(F&& f) { f(value); }  // runs only in Debug
+#else
+		template<class... A> explicit DebugOnly(A&&...) {}
+		template<class F> void with(F&&) {}               // no-op in Release
+#endif
+	};
 
 	//
 	// struct: ItsTime
@@ -242,7 +261,73 @@ namespace ItSoftware::macOS
 	//
 	struct ItsString
 	{
-		static string WidthExpand(string source, size_t width, char fill, ItsExpandDirection direction)
+		/* static std::generator<string> StringFromTextByRegex(const string& text, const string& re) {
+			std::regex rgx(re);
+			std::sregex_token_iterator iter(text.begin(), text.end(), rgx);
+			std::sregex_token_iterator end;
+			for (; iter != end; ++iter) {
+				co_yield iter->str();
+			}
+			co_return;
+		}
+
+		static std::generator<wstring> StringFromTextByRegex(const wstring& text, const wstring& re) {
+			std::wregex rgx(re);
+			std::wsregex_token_iterator iter(text.begin(), text.end(), rgx);
+			std::wsregex_token_iterator end;
+			for (; iter != end; ++iter) {
+				co_yield iter->str();
+			}
+			co_return;
+		}
+
+		static std::generator<string> WordsFromText(const string& text) {
+			std::regex rgx(R"(\b\w+\b)");
+			std::sregex_token_iterator iter(text.begin(), text.end(), rgx);
+			std::sregex_token_iterator end;
+			for (; iter != end; ++iter) {
+				co_yield iter->str();
+			}
+			co_return;
+		}
+
+		static std::generator<wstring> WordsFromText(const wstring& text) {
+			std::wregex rgx(LR"(\b\w+\b)");
+			std::wsregex_token_iterator iter(text.begin(), text.end(), rgx);
+			std::wsregex_token_iterator end;
+			for (; iter != end; ++iter) {
+				co_yield iter->str();
+			}
+			co_return;
+		}
+
+		static std::generator<string> LinesFromText(const string& text) {
+			std::regex r("^.*$");
+			string normalized_text = std::regex_replace(text, std::regex("\r\n"), "\n"); // normalize
+			auto words_begin = std::sregex_iterator(normalized_text.begin(), normalized_text.end(), r);
+			auto words_end = std::sregex_iterator();
+
+			for (std::sregex_iterator i = words_begin; i != words_end; ++i) {
+				co_yield i->str();
+			}
+
+			co_return;
+		}
+
+		static std::generator<wstring> LinesFromText(const wstring& text) {
+			std::wregex r(L"^.*$");
+			wstring normalized_text = std::regex_replace(text, std::wregex(L"\r\n"), L"\n"); // normalize
+			auto words_begin = std::wsregex_iterator(normalized_text.begin(), normalized_text.end(), r);
+			auto words_end = std::wsregex_iterator();
+
+			for (std::wsregex_iterator i = words_begin; i != words_end; ++i) {
+				co_yield i->str();
+			}
+
+			co_return;
+		} */
+
+		static string WidthExpand(const string& source, size_t width, char fill, ItsExpandDirection direction)
 		{
 			if (source.size() == 0)
 			{
@@ -295,12 +380,11 @@ namespace ItSoftware::macOS
 				return string("");
 			}
 
-			result << ends;
-
-			return result.str();
+			string retVal = result.str();
+			return retVal;
 		}
 
-		static vector<string> Split(string input, string delimiter)
+		static vector<string> Split(const string& input, const string& delimiter)
 		{
 			vector<string> result;
 
@@ -318,48 +402,51 @@ namespace ItSoftware::macOS
 			}
 
 			// Add the last segment
-			result.push_back(input.substr(start));
-			
+			result.push_back(input.substr(start));			
+
 			return result;
 		}
 
 		// to lower case
-		static string ToLowerCase(string s)
+		static string ToLowerCase(const string& s)
 		{
-			std::transform(s.begin(), s.end(), s.begin(), tolower);
-			return s;
+			string x = s;
+			std::transform(x.begin(), x.end(), x.begin(), tolower);
+			return x;
 		}
 
 		// to upper case
-		static string ToUpperCase(string s)
+		static string ToUpperCase(const string& s)
 		{
-			std::transform(s.begin(), s.end(), s.begin(), toupper);
-			return s;
+			string x = s;
+			std::transform(x.begin(), x.end(), x.begin(), toupper);
+			return x;
 		}
 
 		// trim from left
-		static string TrimLeft(string s, const char *t = " \t\n\r\f\v")
+		static string TrimLeft(string& s, const string& t = " \t\n\r\f\v")
 		{
 			s.erase(0, s.find_first_not_of(t));
 			return s;
 		}
 
 		// trim from right
-		static string TrimRight(string s, const char *t = " \t\n\r\f\v")
+		static string TrimRight(string& s, const string& t = " \t\n\r\f\v")
 		{
 			s.erase(s.find_last_not_of(t) + 1);
 			return s;
 		}
 
 		// trim from left & right
-		static string Trim(string s, const char *t = " \t\n\r\f\v")
+		static string Trim(const string& s, const string& t = " \t\n\r\f\v")
 		{
-			auto val = TrimRight(s, t);
+			string x = s;
+			auto val = TrimRight(x, t);
 			return TrimLeft(val, t);
 		}
 
 		// left count chars
-		static string Left(string s, uint32_t count)
+		static string Left(const string& s, uint32_t count)
 		{
 			if (s.size() == 0 || count == 0)
 			{
@@ -382,7 +469,7 @@ namespace ItSoftware::macOS
 		}
 
 		// mid index, count chars
-		static string Mid(string s, uint32_t index, uint32_t count)
+		static string Mid(const string& s, uint32_t index, uint32_t count)
 		{
 			if (s.size() == 0 || count == 0 || index >= s.size())
 			{
@@ -411,7 +498,7 @@ namespace ItSoftware::macOS
 		}
 
 		// right count chars
-		static string Right(string s, uint32_t count)
+		static string Right(const string& s, uint32_t count)
 		{
 			if (s.size() == 0 || count == 0)
 			{
@@ -433,7 +520,7 @@ namespace ItSoftware::macOS
 			return str;
 		}
 
-		static string Replace(string s, string replace, string replace_with)
+		static string Replace(const string& s, const string& replace, const string& replace_with)
 		{
 			if (s.size() == 0 || replace.size() == 0 || replace.size() > s.size())
             {
@@ -539,13 +626,13 @@ namespace ItSoftware::macOS
 			}
 			ss << " ";
 			ss << ((index > (szSize.size() - 1) || index < 0) ? "?" : szSize[index]);
-			ss << ends;
-
-			return ss.str();
+			
+			string retVal = ss.str();
+			return retVal;
 		}
 
 		template <typename Numeric>
-		static Numeric ToNumber(const string &str)
+		static Numeric ToNumber(const string& str)
 		{
 			if (std::is_same_v<Numeric, char>) 
 			{
@@ -604,7 +691,7 @@ namespace ItSoftware::macOS
 			return x;
 		}
 
-		static int ToLongFromHex(const string &str)
+		static int ToLongFromHex(const string& str)
 		{
 			char *p;
 			long n = strtol(str.c_str(), &p, 16);
@@ -729,7 +816,7 @@ namespace ItSoftware::macOS
 			return tos;
 		}
 
-		static tm ToTM(const string &dateTime)
+		static tm ToTM(const string& dateTime)
 		{
 			tm t = {0};
 
@@ -743,19 +830,19 @@ namespace ItSoftware::macOS
 			return t;
 		}
 
-		static string ToLowerCase(string &text)
+		static string ToLowerCase(string text)
 		{
 			std::transform(text.begin(), text.end(), text.begin(), tolower);
 			return text;
 		}
 
-		static string ToUpperCase(string &text)
+		static string ToUpperCase(string text)
 		{
 			std::transform(text.begin(), text.end(), text.begin(), toupper);
 			return text;
 		}
 
-		static bool ToBool(string &flag)
+		static bool ToBool(string flag)
 		{
 			flag = ItsConvert::ToLowerCase(flag);
 
@@ -795,7 +882,7 @@ namespace ItSoftware::macOS
 			return tos;
 		}
 
-		static vector<uint64_t> ToPK(const string &pks)
+		static vector<uint64_t> ToPK(const string& pks)
 		{
 			stringstream ss;
 			ss.str(string(pks.begin(), pks.end()));
@@ -825,17 +912,17 @@ namespace ItSoftware::macOS
 		tm m_tm;
 
 	public:
-		explicit ItsDateTime(const tm timeDate)
+		explicit ItsDateTime(tm timeDate)
 		{
 			this->m_tm = timeDate;
 		}
 
-		explicit ItsDateTime(const ItsDateTime &dateTime)
+		ItsDateTime(const ItsDateTime &dateTime)
 		{
 			this->m_tm = dateTime.m_tm;
 		}
 
-		explicit ItsDateTime(ItsDateTime &&dateTime) noexcept
+		ItsDateTime(ItsDateTime &&dateTime) noexcept
 		{
 			this->m_tm = dateTime.m_tm;
 		}
@@ -1294,19 +1381,19 @@ namespace ItSoftware::macOS
 	{
 	private:
 		string m_filename;
-		
+		bool m_doEscape;
 	public:
-		explicit ItsLog(const string& fileName)
-			: m_filename(fileName)
+		explicit ItsLog(const string& fileName, bool doEscape = true)
+			: m_filename(fileName), m_doEscape(doEscape)
 		{
 		}
 		~ItsLog()
 		{
 		}
 
-		static inline std::unique_ptr<ItsLog> ApplicationLog = nullptr;
+		//static inline std::unique_ptr<ItsLog> ApplicationLog = nullptr;
 
-		void Log(const ItsLogStatus& status, const ItsLogType type, const string& title, const string& description)
+		void Log(const ItsLogStatus status, const ItsLogType type, const string& title, const string& description)
 		{
 			static int logCount = 1;
 
@@ -1315,9 +1402,13 @@ namespace ItSoftware::macOS
 				out.close();
 			}
 
-			auto fnEscQuot = [](std::string s) {
+			auto fnEscQuot = [](std::string s, bool doEscape) {
 				//std::string escape_quotes(std::string s)
 				{
+					if (!doEscape) {
+						return s;
+					}
+
 					size_t pos = 0;
 
 					while ((pos = s.find('"', pos)) != std::string::npos)
@@ -1334,32 +1425,32 @@ namespace ItSoftware::macOS
 			out << logCount++ << "> ";			
 			out << ItsLogUtil::LogStatusToString(status) << " ";
 			out << "| Type=" << ItsLogUtil::LogTypeToString(type) << " ";
-			out << "| When=" << std::chrono::system_clock::now() << " ";
-			out << "| Title=\"" << fnEscQuot(title) << "\" ";
-			out << "| Description=\"" << fnEscQuot(description) << "\"\n";
+			out << "| When=" << ItsDateTime::Now().ToString() << " ";
+			out << "| Title=\"" << fnEscQuot(title, this->m_doEscape) << "\" ";
+			out << "| Description=\"" << fnEscQuot(description, this->m_doEscape) << "\"\n";
 		}
 
-		void LogInformation(const ItsLogStatus& status, const string& title, const string& description)
+		void LogInformation(const ItsLogStatus status, const string& title, const string& description)
 		{
 			Log(status, ItsLogType::Information, title, description);
 		}
 
-		void LogWarning(const ItsLogStatus& status, const string& title, const string& description)
+		void LogWarning(const ItsLogStatus status, const string& title, const string& description)
 		{
 			Log(status, ItsLogType::Warning, title, description);
 		}
 
-		void LogError(const ItsLogStatus& status, const string& title, const string& description)
+		void LogError(const ItsLogStatus status, const string& title, const string& description)
 		{
 			Log(status, ItsLogType::Error, title, description);
 		}
 
-		void LogOther(const ItsLogStatus& status, const string& title, const string& description)
+		void LogOther(const ItsLogStatus status, const string& title, const string& description)
 		{
 			Log(status, ItsLogType::Other, title, description);
 		}
 
-		void LogDebug(const ItsLogStatus& status, const string& title, const string& description)
+		void LogDebug(const ItsLogStatus status, const string& title, const string& description)
 		{
 			Log(status, ItsLogType::Debug, title, description);
 		}
@@ -1433,9 +1524,9 @@ namespace ItSoftware::macOS
 				id << data[j];
 
 			} while (++i < count);
-			id << ends;
-
-			return id.str();
+			
+			string retVal = id.str();
+			return retVal;
 		}
 	};
-} // namespace ItSoftware::macOS
+} // namespace ItSoftware::Linux
