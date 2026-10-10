@@ -408,30 +408,28 @@ namespace ItSoftware::macOS
 		}
 
 		// to lower case
-		static string ToLowerCase(const string& s)
+		static string ToLowerCase(string s)
 		{
-			string x = s;
-			std::transform(x.begin(), x.end(), x.begin(), tolower);
-			return x;
+			std::transform(s.begin(), s.end(), s.begin(), tolower);
+			return s;
 		}
 
 		// to upper case
-		static string ToUpperCase(const string& s)
+		static string ToUpperCase(string s)
 		{
-			string x = s;
-			std::transform(x.begin(), x.end(), x.begin(), toupper);
-			return x;
+			std::transform(s.begin(), s.end(), s.begin(), toupper);
+			return s;
 		}
 
 		// trim from left
-		static string TrimLeft(string& s, const string& t = " \t\n\r\f\v")
+		static string TrimLeft(string s, const string& t = " \t\n\r\f\v")
 		{
 			s.erase(0, s.find_first_not_of(t));
 			return s;
 		}
 
 		// trim from right
-		static string TrimRight(string& s, const string& t = " \t\n\r\f\v")
+		static string TrimRight(string s, const string& t = " \t\n\r\f\v")
 		{
 			s.erase(s.find_last_not_of(t) + 1);
 			return s;
@@ -440,8 +438,7 @@ namespace ItSoftware::macOS
 		// trim from left & right
 		static string Trim(const string& s, const string& t = " \t\n\r\f\v")
 		{
-			string x = s;
-			auto val = TrimRight(x, t);
+			auto val = TrimRight(s, t);
 			return TrimLeft(val, t);
 		}
 
